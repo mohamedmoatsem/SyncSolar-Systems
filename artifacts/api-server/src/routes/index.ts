@@ -5,6 +5,7 @@ import alertsRouter from "./alerts";
 import devicesRouter from "./devices";
 import logsRouter from "./logs";
 import dashboardRouter from "./dashboard";
+import geminiRouter from "./gemini/index";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(alertsRouter);
 router.use(devicesRouter);
 router.use(logsRouter);
 router.use(dashboardRouter);
+router.use(geminiRouter);
 
 export default router;

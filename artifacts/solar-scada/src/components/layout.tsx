@@ -6,7 +6,8 @@ import {
   Database,
   LayoutDashboard,
   Zap,
-  TerminalSquare
+  TerminalSquare,
+  Bot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/devices", label: "Devices", icon: Cpu },
   { href: "/alerts", label: "Alerts", icon: AlertTriangle },
   { href: "/logs", label: "Logs", icon: Database },
+  { href: "/ai-assistant", label: "AI Assistant", icon: Bot },
 ];
 
 export function Layout({ children }: LayoutProps) {

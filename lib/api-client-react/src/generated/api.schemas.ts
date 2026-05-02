@@ -5,6 +5,48 @@
  * Solar SCADA IoT Monitoring & Control System API
  * OpenAPI spec version: 0.1.0
  */
+export interface GeminiConversation {
+  id: number;
+  title: string;
+  createdAt: string;
+}
+
+export interface GeminiMessage {
+  id: number;
+  conversationId: number;
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface GeminiNewConversation {
+  title: string;
+}
+
+export interface GeminiNewMessage {
+  content: string;
+}
+
+export interface GeminiConversationWithMessages {
+  id: number;
+  title: string;
+  createdAt: string;
+  messages: GeminiMessage[];
+}
+
+export interface GeminiImagePrompt {
+  prompt: string;
+}
+
+export interface GeminiImageResult {
+  b64_json: string;
+  mimeType: string;
+}
+
+export interface GeminiError {
+  error: string;
+}
+
 export interface HealthStatus {
   status: string;
 }

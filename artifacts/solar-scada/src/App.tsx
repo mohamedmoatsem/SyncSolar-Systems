@@ -10,6 +10,7 @@ import Monitoring from "@/pages/monitoring";
 import Devices from "@/pages/devices";
 import Alerts from "@/pages/alerts";
 import Logs from "@/pages/logs";
+import AiAssistant from "@/pages/ai-assistant";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ function Router() {
         <Route path="/devices" component={Devices} />
         <Route path="/alerts" component={Alerts} />
         <Route path="/logs" component={Logs} />
+        <Route path="/ai-assistant" component={AiAssistant} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
