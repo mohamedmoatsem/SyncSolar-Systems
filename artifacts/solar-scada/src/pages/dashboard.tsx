@@ -8,7 +8,7 @@ export default function Dashboard() {
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({
     query: { refetchInterval: 5000 }
   });
-  
+
   const { data: latest, isLoading: loadingLatest } = useGetLatestReadings({
     query: { refetchInterval: 5000 }
   });
@@ -34,31 +34,37 @@ export default function Dashboard() {
   };
 
   if (loadingSummary || loadingLatest) {
-    return <div className="animate-pulse space-y-4">
-      <div className="h-32 bg-card rounded-sm" />
-      <div className="h-64 bg-card rounded-sm" />
-    </div>;
+    return (
+      <div className="animate-pulse space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-card rounded-sm" />)}
+        </div>
+        <div className="h-56 bg-card rounded-sm" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Top Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-border bg-card/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">System Status</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 pt-3 px-3 sm:px-6 sm:pt-6">
+            <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              System Status
+            </CardTitle>
             {getStatusIcon(summary?.systemStatus)}
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-data font-bold uppercase mb-1">
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <div className="text-lg sm:text-2xl font-data font-bold uppercase mb-1">
               {summary?.systemStatus || 'UNKNOWN'}
             </div>
-            <div className="flex gap-2 text-xs">
-              <Badge variant="outline" className={getStatusColor(summary?.systemStatus)}>
-                {summary?.devicesOnline}/{summary?.totalDevices} Devices
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              <Badge variant="outline" className={`text-[9px] sm:text-xs ${getStatusColor(summary?.systemStatus)}`}>
+                {summary?.devicesOnline}/{summary?.totalDevices} Dev
               </Badge>
               {!!summary?.activeAlerts && (
-                <Badge variant="outline" className="text-destructive bg-destructive/10 border-destructive/20">
+                <Badge variant="outline" className="text-[9px] sm:text-xs text-destructive bg-destructive/10 border-destructive/20">
                   {summary.activeAlerts} Alerts
                 </Badge>
               )}
@@ -67,33 +73,41 @@ export default function Dashboard() {
         </Card>
 
         <Card className="border-border bg-card/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Current Power</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 pt-3 px-3 sm:px-6 sm:pt-6">
+            <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Current Power
+            </CardTitle>
             <Zap className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-data font-bold text-primary">
-              {summary?.currentPower?.toLocaleString()} <span className="text-sm text-muted-foreground">W</span>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <div className="text-2xl sm:text-3xl font-data font-bold text-primary">
+              {summary?.currentPower?.toLocaleString()}
+              <span className="text-xs sm:text-sm text-muted-foreground ml-1">W</span>
             </div>
-            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              <span>Energy Today: <strong className="font-data text-foreground">{summary?.energyToday?.toFixed(1)} kWh</strong></span>
+            <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <TrendingUp className="h-3 w-3 shrink-0" />
+              <span>
+                Today: <strong className="font-data text-foreground">{summary?.energyToday?.toFixed(1)} kWh</strong>
+              </span>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Battery Level</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 pt-3 px-3 sm:px-6 sm:pt-6">
+            <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Battery Level
+            </CardTitle>
             <Battery className="h-4 w-4 text-secondary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-data font-bold text-secondary">
-              {summary?.batteryLevel?.toFixed(1)} <span className="text-sm text-muted-foreground">%</span>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <div className="text-2xl sm:text-3xl font-data font-bold text-secondary">
+              {summary?.batteryLevel?.toFixed(1)}
+              <span className="text-xs sm:text-sm text-muted-foreground ml-1">%</span>
             </div>
             <div className="w-full bg-muted h-1.5 mt-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-secondary h-full transition-all duration-500" 
+              <div
+                className="bg-secondary h-full transition-all duration-500"
                 style={{ width: `${summary?.batteryLevel || 0}%` }}
               />
             </div>
@@ -101,83 +115,130 @@ export default function Dashboard() {
         </Card>
 
         <Card className="border-border bg-card/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Impact Today</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 pt-3 px-3 sm:px-6 sm:pt-6">
+            <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Impact Today
+            </CardTitle>
             <Leaf className="h-4 w-4 text-green-500" />
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span className="font-data font-bold text-lg">${summary?.savingsToday?.toFixed(2)}</span>
-                <span className="text-xs text-muted-foreground">Saved</span>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                <span className="font-data font-bold text-base sm:text-lg">
+                  ${summary?.savingsToday?.toFixed(2)}
+                </span>
+                <span className="text-[10px] text-muted-foreground">Saved</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Leaf className="h-4 w-4 text-muted-foreground" />
-                <span className="font-data font-bold text-lg">{summary?.co2Saved?.toFixed(1)}</span>
-                <span className="text-xs text-muted-foreground">kg CO₂</span>
+              <div className="flex items-center gap-1.5">
+                <Leaf className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                <span className="font-data font-bold text-base sm:text-lg">
+                  {summary?.co2Saved?.toFixed(1)}
+                </span>
+                <span className="text-[10px] text-muted-foreground">kg CO₂</span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Chart Row */}
+      {/* Main Chart */}
       <Card className="border-border bg-card/80">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium uppercase tracking-wider">Energy Production vs Consumption</CardTitle>
+        <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+          <CardTitle className="text-xs sm:text-sm font-medium uppercase tracking-wider">
+            Energy Production vs Consumption
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full">
+        <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
+          <div className="h-[200px] sm:h-[260px] lg:h-[300px] w-full">
             {energyChart ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={energyChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={energyChart} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorProd" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="hour" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}W`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '4px' }}
+                  <XAxis
+                    dataKey="hour"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `${v}W`}
+                    width={48}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      borderColor: 'hsl(var(--border))',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                    }}
                     itemStyle={{ color: 'hsl(var(--foreground))', fontFamily: 'var(--app-font-mono)' }}
                     labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="production" name="Production" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorProd)" />
-                  <Area type="monotone" dataKey="consumption" name="Consumption" stroke="hsl(var(--destructive))" fillOpacity={1} fill="url(#colorCons)" />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
+                  <Area
+                    type="monotone"
+                    dataKey="production"
+                    name="Production"
+                    stroke="hsl(var(--primary))"
+                    fillOpacity={1}
+                    fill="url(#colorProd)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="consumption"
+                    name="Consumption"
+                    stroke="hsl(var(--destructive))"
+                    fillOpacity={1}
+                    fill="url(#colorCons)"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">NO DATA</div>
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                NO DATA
+              </div>
             )}
           </div>
         </CardContent>
       </Card>
 
       {/* Live SCADA Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: 'Array Voltage', value: latest?.voltage, unit: 'V' },
           { label: 'Array Current', value: latest?.current, unit: 'A' },
           { label: 'Irradiance', value: latest?.irradiance, unit: 'W/m²' },
           { label: 'Panel Temp', value: latest?.temperature, unit: '°C' },
-          { label: 'Battery Voltage', value: latest?.batteryVoltage, unit: 'V' },
+          { label: 'Battery V', value: latest?.batteryVoltage, unit: 'V' },
           { label: 'Load Power', value: latest?.loadPower, unit: 'W' },
         ].map((item, i) => (
           <Card key={i} className="bg-card/40 border-border">
-            <CardContent className="p-4 flex flex-col">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{item.label}</span>
+            <CardContent className="p-3 flex flex-col">
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest leading-tight">
+                {item.label}
+              </span>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-xl font-data font-bold text-foreground">{item.value?.toFixed(1) || '0.0'}</span>
-                <span className="text-xs text-muted-foreground font-data">{item.unit}</span>
+                <span className="text-base sm:text-xl font-data font-bold text-foreground">
+                  {item.value?.toFixed(1) || '0.0'}
+                </span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-data">{item.unit}</span>
               </div>
             </CardContent>
           </Card>

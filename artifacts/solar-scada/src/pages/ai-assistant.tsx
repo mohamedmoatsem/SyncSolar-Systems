@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bot, Send, Image as ImageIcon, Plus, Trash2, X, MessageSquare, Loader2, WifiOff } from "lucide-react";
+import { Bot, Send, Image as ImageIcon, Plus, Trash2, X, MessageSquare, Loader2, WifiOff, ChevronLeft } from "lucide-react";
 import { useOffline } from "@/hooks/useOffline";
 import ReactMarkdown from "react-markdown";
 import { format } from "date-fns";
@@ -22,21 +22,22 @@ export default function AiAssistant() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isOffline = useOffline();
-  
+
   const [activeConvId, setActiveConvId] = useState<number | null>(null);
   const [inputText, setInputText] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [showSidebar, setShowSidebar] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: conversations = [], isLoading: isLoadingConvs } = useListGeminiConversations();
   const createConv = useCreateGeminiConversation();
   const deleteConv = useDeleteGeminiConversation();
-  
+
   const { data: activeConversation, isLoading: isLoadingConv } = useGetGeminiConversation(
-    activeConvId!, 
+    activeConvId!,
     { query: { enabled: !!activeConvId } }
   );
 
@@ -53,9 +54,15 @@ export default function AiAssistant() {
         onSuccess: (newConv) => {
           queryClient.invalidateQueries({ queryKey: getListGeminiConversationsQueryKey() });
           setActiveConvId(newConv.id);
+          setShowSidebar(false);
         },
       }
     );
+  };
+
+  const handleSelectConversation = (id: number) => {
+    setActiveConvId(id);
+    setShowSidebar(false);
   };
 
   const handleDeleteConversation = (e: React.MouseEvent, id: number) => {
@@ -65,7 +72,10 @@ export default function AiAssistant() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListGeminiConversationsQueryKey() });
-          if (activeConvId === id) setActiveConvId(null);
+          if (activeConvId === id) {
+            setActiveConvId(null);
+            setShowSidebar(true);
+          }
         },
       }
     );
@@ -74,7 +84,6 @@ export default function AiAssistant() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       setSelectedImage(event.target?.result as string);
@@ -89,7 +98,7 @@ export default function AiAssistant() {
 
     const messageContent = JSON.stringify({
       text: inputText,
-      ...(selectedImage ? { imageData: selectedImage } : {})
+      ...(selectedImage ? { imageData: selectedImage } : {}),
     });
 
     setInputText("");
@@ -102,22 +111,19 @@ export default function AiAssistant() {
       conversationId: activeConvId,
       role: "user",
       content: messageContent,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     queryClient.setQueryData(getGetGeminiConversationQueryKey(activeConvId), (old: any) => {
       if (!old) return old;
-      return {
-        ...old,
-        messages: [...old.messages, tempMessage]
-      };
+      return { ...old, messages: [...old.messages, tempMessage] };
     });
 
     if (isOffline) {
       toast({
         variant: "destructive",
         title: "لا يوجد اتصال بالإنترنت",
-        description: "وكيل الذكاء الاصطناعي يتطلب اتصالاً بالإنترنت. البيانات الأخرى متاحة من الكاش.",
+        description: "وكيل الذكاء الاصطناعي يتطلب اتصالاً بالإنترنت.",
       });
       setIsStreaming(false);
       return;
@@ -125,11 +131,14 @@ export default function AiAssistant() {
 
     try {
       const BASE_URL = import.meta.env.BASE_URL;
-      const response = await fetch(`${BASE_URL}api/gemini/conversations/${activeConvId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: messageContent }),
-      });
+      const response = await fetch(
+        `${BASE_URL}api/gemini/conversations/${activeConvId}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: messageContent }),
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to send message");
 
@@ -148,10 +157,7 @@ export default function AiAssistant() {
             try {
               const data = JSON.parse(line.slice(6));
               if (data.content) {
-                setStreamingText(prev => prev + data.content);
-              }
-              if (data.done) {
-                // Finished
+                setStreamingText((prev) => prev + data.content);
               }
             } catch (err) {
               console.error("Error parsing SSE JSON", err);
@@ -181,10 +187,10 @@ export default function AiAssistant() {
         <div className="flex flex-col gap-2">
           {parsed.text && <p className="whitespace-pre-wrap">{parsed.text}</p>}
           {parsed.imageData && (
-            <img 
-              src={parsed.imageData} 
-              alt="Uploaded context" 
-              className="max-w-sm rounded-md border border-border object-contain"
+            <img
+              src={parsed.imageData}
+              alt="Uploaded context"
+              className="max-w-[200px] sm:max-w-sm rounded-md border border-border object-contain"
             />
           )}
         </div>
@@ -195,29 +201,42 @@ export default function AiAssistant() {
   };
 
   return (
-    <div className="flex h-full w-full gap-4 overflow-hidden">
-      {/* Sidebar */}
-      <div className="flex w-80 flex-col rounded-md border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border p-4">
+    <div className="flex h-full w-full gap-0 sm:gap-4 overflow-hidden">
+      {/* Sidebar — full on desktop, conditional on mobile */}
+      <div
+        className={`
+          flex flex-col rounded-md border border-border bg-card
+          transition-all duration-300
+          ${showSidebar
+            ? "w-full sm:w-72 flex-shrink-0"
+            : "hidden sm:flex sm:w-72 flex-shrink-0"
+          }
+        `}
+      >
+        <div className="flex items-center justify-between border-b border-border p-3 sm:p-4">
           <div className="flex items-center gap-2 font-mono text-sm font-semibold tracking-tight text-primary">
-            <Bot className="h-5 w-5" />
-            DIAGNOSTIC_SESSIONS
+            <Bot className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="text-xs sm:text-sm">SESSIONS</span>
           </div>
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/10"
+            className="h-7 w-7 sm:h-8 sm:w-8 text-primary border-primary/20 hover:bg-primary/10"
             onClick={handleCreateConversation}
             disabled={createConv.isPending}
           >
-            {createConv.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {createConv.isPending ? (
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+            ) : (
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+            )}
           </Button>
         </div>
-        
+
         <ScrollArea className="flex-1">
           {isLoadingConvs ? (
             <div className="p-4 text-center text-sm font-mono text-muted-foreground">
-              LOADING_SESSIONS...
+              LOADING...
             </div>
           ) : conversations.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
@@ -228,21 +247,21 @@ export default function AiAssistant() {
               {conversations.map((conv) => (
                 <div
                   key={conv.id}
-                  onClick={() => setActiveConvId(conv.id)}
-                  className={`group relative flex cursor-pointer items-center justify-between rounded-sm px-3 py-2 text-sm transition-colors ${
+                  onClick={() => handleSelectConversation(conv.id)}
+                  className={`group relative flex cursor-pointer items-center justify-between rounded-sm px-3 py-2.5 text-sm transition-colors ${
                     activeConvId === conv.id
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center gap-2 truncate min-w-0">
                     <MessageSquare className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{conv.title}</span>
+                    <span className="truncate text-xs sm:text-sm">{conv.title}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10"
+                    className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10"
                     onClick={(e) => handleDeleteConversation(e, conv.id)}
                   >
                     <Trash2 className="h-3 w-3" />
@@ -255,42 +274,65 @@ export default function AiAssistant() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex flex-1 flex-col rounded-md border border-border bg-card">
+      <div
+        className={`
+          flex-1 flex-col rounded-md border border-border bg-card min-w-0
+          ${showSidebar ? "hidden sm:flex" : "flex"}
+        `}
+      >
         {activeConvId ? (
           <>
             {/* Chat Header */}
-            <div className="flex h-14 items-center border-b border-border px-4 font-mono text-sm">
-              <span className="text-secondary">SESSION_ID: </span>
-              <span className="ml-2 text-muted-foreground">{activeConvId.toString().padStart(4, '0')}</span>
-              {isLoadingConv && <Loader2 className="ml-4 h-4 w-4 animate-spin text-muted-foreground" />}
+            <div className="flex h-12 sm:h-14 items-center border-b border-border px-3 sm:px-4 font-mono text-xs sm:text-sm gap-3">
+              <button
+                onClick={() => setShowSidebar(true)}
+                className="sm:hidden text-muted-foreground hover:text-foreground p-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-secondary">SESSION:</span>
+              <span className="text-muted-foreground">{activeConvId.toString().padStart(4, "0")}</span>
+              {isLoadingConv && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-2" />}
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
-              <div className="flex flex-col gap-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4" ref={scrollRef}>
+              <div className="flex flex-col gap-4 sm:gap-6">
                 {activeConversation?.messages.map((msg, idx) => (
                   <div
                     key={msg.id || idx}
-                    className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                    className={`flex gap-2 sm:gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                   >
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border ${
-                      msg.role === 'user' 
-                        ? 'border-secondary/20 bg-secondary/10 text-secondary' 
-                        : 'border-primary/20 bg-primary/10 text-primary'
-                    }`}>
-                      {msg.role === 'user' ? <div className="text-xs font-mono">OP</div> : <Bot className="h-4 w-4" />}
+                    <div
+                      className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-sm border ${
+                        msg.role === "user"
+                          ? "border-secondary/20 bg-secondary/10 text-secondary"
+                          : "border-primary/20 bg-primary/10 text-primary"
+                      }`}
+                    >
+                      {msg.role === "user" ? (
+                        <div className="text-[10px] font-mono">OP</div>
+                      ) : (
+                        <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
+                      )}
                     </div>
-                    
-                    <div className={`flex max-w-[80%] flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div className="text-xs font-mono text-muted-foreground">
-                        {format(new Date(msg.createdAt), "HH:mm:ss.SSS")}
+
+                    <div
+                      className={`flex max-w-[85%] sm:max-w-[80%] flex-col gap-1 ${
+                        msg.role === "user" ? "items-end" : "items-start"
+                      }`}
+                    >
+                      <div className="text-[10px] font-mono text-muted-foreground">
+                        {format(new Date(msg.createdAt), "HH:mm:ss")}
                       </div>
-                      <div className={`rounded-md border p-3 text-sm ${
-                        msg.role === 'user'
-                          ? 'border-secondary/20 bg-secondary/5 text-foreground'
-                          : 'border-primary/20 bg-primary/5 text-foreground prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-background prose-pre:border prose-pre:border-border'
-                      }`}>
-                        {msg.role === 'user' ? (
+                      <div
+                        className={`rounded-md border p-2.5 sm:p-3 text-xs sm:text-sm ${
+                          msg.role === "user"
+                            ? "border-secondary/20 bg-secondary/5 text-foreground"
+                            : "border-primary/20 bg-primary/5 text-foreground prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-background prose-pre:border prose-pre:border-border"
+                        }`}
+                      >
+                        {msg.role === "user" ? (
                           renderMessageContent(msg.content)
                         ) : (
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -299,17 +341,17 @@ export default function AiAssistant() {
                     </div>
                   </div>
                 ))}
-                
+
                 {isStreaming && (
-                  <div className="flex gap-4 flex-row">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-primary/20 bg-primary/10 text-primary">
-                      <Bot className="h-4 w-4" />
+                  <div className="flex gap-2 sm:gap-4 flex-row">
+                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-sm border border-primary/20 bg-primary/10 text-primary">
+                      <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
                     </div>
-                    <div className="flex max-w-[80%] flex-col gap-1 items-start">
-                      <div className="text-xs font-mono text-primary animate-pulse">
-                        PROCESSING_RESPONSE...
+                    <div className="flex max-w-[85%] flex-col gap-1 items-start">
+                      <div className="text-[10px] font-mono text-primary animate-pulse">
+                        PROCESSING...
                       </div>
-                      <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm text-foreground prose prose-invert max-w-none">
+                      <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 sm:p-3 text-xs sm:text-sm text-foreground prose prose-invert max-w-none">
                         <ReactMarkdown>{streamingText}</ReactMarkdown>
                       </div>
                     </div>
@@ -319,16 +361,20 @@ export default function AiAssistant() {
             </div>
 
             {/* Input Area */}
-            <div className="border-t border-border bg-background/50 p-4">
+            <div className="border-t border-border bg-background/50 p-3 sm:p-4">
               {isOffline && (
-                <div className="mb-3 flex items-center gap-2 rounded-sm border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-mono text-destructive">
+                <div className="mb-2 flex items-center gap-2 rounded-sm border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-mono text-destructive">
                   <WifiOff className="h-3 w-3 shrink-0" />
-                  <span>AI_CORE_OFFLINE — يتطلب اتصالاً بالإنترنت. البيانات المخزّنة متاحة للعرض.</span>
+                  <span>AI_CORE_OFFLINE — يتطلب اتصالاً بالإنترنت</span>
                 </div>
               )}
               {selectedImage && (
                 <div className="mb-2 inline-flex relative rounded-md border border-border bg-card p-1">
-                  <img src={selectedImage} alt="Preview" className="h-20 w-auto rounded-sm object-contain" />
+                  <img
+                    src={selectedImage}
+                    alt="Preview"
+                    className="h-16 sm:h-20 w-auto rounded-sm object-contain"
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
@@ -339,7 +385,7 @@ export default function AiAssistant() {
                   </Button>
                 </div>
               )}
-              
+
               <form onSubmit={handleSendMessage} className="flex items-end gap-2">
                 <input
                   type="file"
@@ -352,41 +398,49 @@ export default function AiAssistant() {
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="shrink-0 border-border bg-card hover:bg-accent hover:text-accent-foreground"
+                  className="h-9 w-9 shrink-0 border-border bg-card hover:bg-accent"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isStreaming}
                 >
                   <ImageIcon className="h-4 w-4" />
                 </Button>
-                
-                <div className="relative flex-1">
-                  <Input
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Enter diagnostic query or system command..."
-                    className="pr-12 font-mono placeholder:text-muted-foreground/50 border-border bg-card focus-visible:ring-primary/50"
-                    disabled={isStreaming}
-                  />
-                </div>
-                
-                <Button 
-                  type="submit" 
+
+                <Input
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Enter diagnostic query..."
+                  className="flex-1 h-9 text-xs sm:text-sm font-mono placeholder:text-muted-foreground/50 border-border bg-card focus-visible:ring-primary/50"
+                  disabled={isStreaming || isOffline}
+                />
+
+                <Button
+                  type="submit"
                   disabled={isStreaming || (!inputText.trim() && !selectedImage) || isOffline}
-                  className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="h-9 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 px-3 sm:px-4"
                 >
-                  <Send className="h-4 w-4 mr-2" />
-                  <span className="font-mono font-bold tracking-tight">EXECUTE</span>
+                  <Send className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline font-mono font-bold tracking-tight text-xs">EXECUTE</span>
                 </Button>
               </form>
             </div>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center text-center text-muted-foreground">
-            <Bot className="mb-4 h-12 w-12 text-primary/20" />
-            <p className="font-mono text-sm tracking-widest text-primary/50 uppercase">No Session Selected</p>
-            <p className="mt-2 text-sm max-w-sm text-muted-foreground/70">
-              Select an existing diagnostic session from the sidebar or initialize a new one to interface with the AI core.
+          <div className="flex flex-1 flex-col items-center justify-center text-center text-muted-foreground p-6">
+            <Bot className="mb-4 h-10 w-10 sm:h-12 sm:w-12 text-primary/20" />
+            <p className="font-mono text-xs sm:text-sm tracking-widest text-primary/50 uppercase">
+              No Session Selected
             </p>
+            <p className="mt-2 text-xs sm:text-sm max-w-xs text-muted-foreground/70">
+              Select an existing session or create a new one.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 sm:hidden border-primary/20 text-primary hover:bg-primary/10"
+              onClick={() => setShowSidebar(true)}
+            >
+              View Sessions
+            </Button>
           </div>
         )}
       </div>
