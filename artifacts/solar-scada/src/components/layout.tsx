@@ -7,9 +7,13 @@ import {
   LayoutDashboard,
   Zap,
   TerminalSquare,
-  Bot
+  Bot,
+  WifiOff,
+  Wifi
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOffline } from "@/hooks/useOffline";
+import { useEffect, useState } from "react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,8 +28,23 @@ const navItems = [
   { href: "/ai-assistant", label: "AI Assistant", icon: Bot },
 ];
 
+function LiveClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span>
+      {now.toISOString().split("T")[0]}{" "}
+      {now.toISOString().split("T")[1].substring(0, 8)}
+    </span>
+  );
+}
+
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
+  const isOffline = useOffline();
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground">
@@ -54,14 +73,26 @@ export function Layout({ children }: LayoutProps) {
               >
                 <Icon className={cn("h-4 w-4", isActive ? "text-sidebar-primary" : "text-muted-foreground")} />
                 {item.label}
+                {item.href === "/ai-assistant" && isOffline && (
+                  <span className="ml-auto text-xs text-destructive font-mono">OFFLINE</span>
+                )}
               </Link>
             );
           })}
         </nav>
         <div className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-            <TerminalSquare className="h-4 w-4" />
-            <span>SYS_ONLINE_OK</span>
+            {isOffline ? (
+              <>
+                <WifiOff className="h-4 w-4 text-destructive" />
+                <span className="text-destructive">OFFLINE_MODE</span>
+              </>
+            ) : (
+              <>
+                <TerminalSquare className="h-4 w-4" />
+                <span>SYS_ONLINE_OK</span>
+              </>
+            )}
           </div>
         </div>
       </aside>
@@ -73,12 +104,19 @@ export function Layout({ children }: LayoutProps) {
             {navItems.find(i => i.href === location)?.label || "Dashboard"}
           </h1>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm font-mono">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-              <span className="text-secondary">LIVE SYNC</span>
-            </div>
+            {isOffline ? (
+              <div className="flex items-center gap-2 text-sm font-mono text-destructive">
+                <WifiOff className="h-4 w-4" />
+                <span>CACHED DATA</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm font-mono">
+                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+                <span className="text-secondary">LIVE SYNC</span>
+              </div>
+            )}
             <div className="text-xs text-muted-foreground font-mono">
-              {new Date().toISOString().split('T')[0]} {new Date().toISOString().split('T')[1].substring(0, 8)}
+              <LiveClock />
             </div>
           </div>
         </header>

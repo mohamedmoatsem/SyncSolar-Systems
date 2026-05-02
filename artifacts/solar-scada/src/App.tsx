@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import { Layout } from "@/components/layout";
+import { OfflineBanner } from "@/components/offline-banner";
 import Dashboard from "@/pages/dashboard";
 import Monitoring from "@/pages/monitoring";
 import Devices from "@/pages/devices";
@@ -12,7 +13,20 @@ import Alerts from "@/pages/alerts";
 import Logs from "@/pages/logs";
 import AiAssistant from "@/pages/ai-assistant";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: unknown) => {
+        const isNetworkError =
+          error instanceof TypeError && error.message.includes("fetch");
+        if (isNetworkError) return false;
+        return failureCount < 2;
+      },
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 60 * 24,
+    },
+  },
+});
 
 function Router() {
   return (
@@ -35,6 +49,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <OfflineBanner />
           <Router />
         </WouterRouter>
         <Toaster />

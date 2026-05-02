@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { VitePWA } from "vite-plugin-pwa";
 
 const rawPort = process.env.PORT;
 
@@ -32,6 +33,105 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    VitePWA({
+      registerType: "autoUpdate",
+      devOptions: {
+        enabled: true,
+        type: "module",
+      },
+      injectRegister: "auto",
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: /\/api\/dashboard\/summary/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-dashboard",
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /\/api\/readings\/latest/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-readings-latest",
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 5 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /\/api\/readings\/history/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-readings-history",
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /\/api\/dashboard\/energy-today/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-energy-today",
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 30 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /\/api\/alerts/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-alerts",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 10 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /\/api\/devices/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-devices",
+              expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /\/api\/logs/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-logs",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+        ],
+      },
+      manifest: {
+        name: "Solar SCADA Dashboard",
+        short_name: "SOLAR_SCADA",
+        description: "Solar Energy Monitoring & Control System with SCADA and IoT",
+        theme_color: "#0a0f1a",
+        background_color: "#0a0f1a",
+        display: "standalone",
+        orientation: "landscape",
+        start_url: "/",
+        icons: [
+          {
+            src: "icons/icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+          {
+            src: "icons/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+          },
+        ],
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

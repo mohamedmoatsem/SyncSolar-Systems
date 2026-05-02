@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bot, Send, Image as ImageIcon, Plus, Trash2, X, MessageSquare, Loader2 } from "lucide-react";
+import { Bot, Send, Image as ImageIcon, Plus, Trash2, X, MessageSquare, Loader2, WifiOff } from "lucide-react";
+import { useOffline } from "@/hooks/useOffline";
 import ReactMarkdown from "react-markdown";
 import { format } from "date-fns";
 
@@ -20,6 +21,7 @@ import {
 export default function AiAssistant() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const isOffline = useOffline();
   
   const [activeConvId, setActiveConvId] = useState<number | null>(null);
   const [inputText, setInputText] = useState("");
@@ -110,6 +112,16 @@ export default function AiAssistant() {
         messages: [...old.messages, tempMessage]
       };
     });
+
+    if (isOffline) {
+      toast({
+        variant: "destructive",
+        title: "لا يوجد اتصال بالإنترنت",
+        description: "وكيل الذكاء الاصطناعي يتطلب اتصالاً بالإنترنت. البيانات الأخرى متاحة من الكاش.",
+      });
+      setIsStreaming(false);
+      return;
+    }
 
     try {
       const BASE_URL = import.meta.env.BASE_URL;
@@ -308,6 +320,12 @@ export default function AiAssistant() {
 
             {/* Input Area */}
             <div className="border-t border-border bg-background/50 p-4">
+              {isOffline && (
+                <div className="mb-3 flex items-center gap-2 rounded-sm border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-mono text-destructive">
+                  <WifiOff className="h-3 w-3 shrink-0" />
+                  <span>AI_CORE_OFFLINE — يتطلب اتصالاً بالإنترنت. البيانات المخزّنة متاحة للعرض.</span>
+                </div>
+              )}
               {selectedImage && (
                 <div className="mb-2 inline-flex relative rounded-md border border-border bg-card p-1">
                   <img src={selectedImage} alt="Preview" className="h-20 w-auto rounded-sm object-contain" />
@@ -353,7 +371,7 @@ export default function AiAssistant() {
                 
                 <Button 
                   type="submit" 
-                  disabled={isStreaming || (!inputText.trim() && !selectedImage)}
+                  disabled={isStreaming || (!inputText.trim() && !selectedImage) || isOffline}
                   className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Send className="h-4 w-4 mr-2" />
