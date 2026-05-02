@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Solar SCADA IoT Monitoring & Control System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: readings
+    description: Real-time sensor readings
+  - name: alerts
+    description: System alerts and notifications
+  - name: logs
+    description: Data logging
+  - name: devices
+    description: Device control
+  - name: dashboard
+    description: Dashboard summary and analytics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,211 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /readings/latest:
+    get:
+      operationId: getLatestReadings
+      tags: [readings]
+      summary: Get latest sensor readings
+      responses:
+        "200":
+          description: Latest readings from all sensors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorReading"
+
+  /readings/history:
+    get:
+      operationId: getReadingsHistory
+      tags: [readings]
+      summary: Get historical sensor readings
+      parameters:
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 24
+        - name: metric
+          in: query
+          schema:
+            type: string
+            enum: [voltage, current, power, battery, temperature, irradiance]
+      responses:
+        "200":
+          description: Historical readings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoricalPoint"
+
+  /readings:
+    post:
+      operationId: createReading
+      tags: [readings]
+      summary: Post new sensor reading (from IoT device)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SensorReadingInput"
+      responses:
+        "201":
+          description: Reading saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorReading"
+
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [alerts]
+      summary: List all alerts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, resolved, all]
+            default: all
+      responses:
+        "200":
+          description: Alerts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+
+  /alerts/{id}/resolve:
+    patch:
+      operationId: resolveAlert
+      tags: [alerts]
+      summary: Resolve an alert
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Alert resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+
+  /logs:
+    get:
+      operationId: listLogs
+      tags: [logs]
+      summary: Get data logs
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Data logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogsResponse"
+
+  /devices:
+    get:
+      operationId: listDevices
+      tags: [devices]
+      summary: List all devices
+      responses:
+        "200":
+          description: Device list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+
+  /devices/{id}/toggle:
+    patch:
+      operationId: toggleDevice
+      tags: [devices]
+      summary: Toggle device on/off
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceToggleInput"
+      responses:
+        "200":
+          description: Device updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary metrics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/energy-today:
+    get:
+      operationId: getEnergyToday
+      tags: [dashboard]
+      summary: Get today's energy production breakdown by hour
+      responses:
+        "200":
+          description: Hourly energy data for today
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnergyHourPoint"
+
+  /dashboard/alerts-summary:
+    get:
+      operationId: getAlertsSummary
+      tags: [dashboard]
+      summary: Get alerts count summary
+      responses:
+        "200":
+          description: Alert counts by type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertsSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +245,230 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    SensorReading:
+      type: object
+      properties:
+        id:
+          type: integer
+        voltage:
+          type: number
+          description: Solar panel voltage in Volts
+        current:
+          type: number
+          description: Current in Amperes
+        power:
+          type: number
+          description: Power output in Watts
+        batteryLevel:
+          type: number
+          description: Battery charge percentage (0-100)
+        batteryVoltage:
+          type: number
+          description: Battery voltage in Volts
+        temperature:
+          type: number
+          description: Panel temperature in Celsius
+        irradiance:
+          type: number
+          description: Solar irradiance in W/m²
+        loadPower:
+          type: number
+          description: Load/consumption power in Watts
+        systemStatus:
+          type: string
+          enum: [normal, warning, fault, offline]
+        timestamp:
+          type: string
+          format: date-time
+      required: [id, voltage, current, power, batteryLevel, batteryVoltage, temperature, irradiance, loadPower, systemStatus, timestamp]
+
+    SensorReadingInput:
+      type: object
+      properties:
+        voltage:
+          type: number
+        current:
+          type: number
+        power:
+          type: number
+        batteryLevel:
+          type: number
+        batteryVoltage:
+          type: number
+        temperature:
+          type: number
+        irradiance:
+          type: number
+        loadPower:
+          type: number
+        systemStatus:
+          type: string
+          enum: [normal, warning, fault, offline]
+      required: [voltage, current, power, batteryLevel, batteryVoltage, temperature, irradiance, loadPower]
+
+    HistoricalPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        value:
+          type: number
+        metric:
+          type: string
+      required: [timestamp, value, metric]
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [overvoltage, undervoltage, overtemperature, low_battery, fault, info]
+        severity:
+          type: string
+          enum: [critical, warning, info]
+        message:
+          type: string
+        status:
+          type: string
+          enum: [active, resolved]
+        timestamp:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, type, severity, message, status, timestamp]
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [inverter, charge_controller, load, sensor, pump]
+        status:
+          type: string
+          enum: [on, off, fault]
+        isEnabled:
+          type: boolean
+        powerRating:
+          type: number
+          description: Power rating in Watts
+        location:
+          type: string
+      required: [id, name, type, status, isEnabled, powerRating, location]
+
+    DeviceToggleInput:
+      type: object
+      properties:
+        isEnabled:
+          type: boolean
+      required: [isEnabled]
+
+    LogsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required: [data, total, page, totalPages]
+
+    LogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        voltage:
+          type: number
+        current:
+          type: number
+        power:
+          type: number
+        batteryLevel:
+          type: number
+        temperature:
+          type: number
+        irradiance:
+          type: number
+        loadPower:
+          type: number
+        systemStatus:
+          type: string
+      required: [id, timestamp, voltage, current, power, batteryLevel, temperature, irradiance, loadPower, systemStatus]
+
+    DashboardSummary:
+      type: object
+      properties:
+        currentPower:
+          type: number
+        energyToday:
+          type: number
+          description: kWh generated today
+        energyTotal:
+          type: number
+          description: Total kWh generated
+        batteryLevel:
+          type: number
+        systemStatus:
+          type: string
+          enum: [normal, warning, fault, offline]
+        activeAlerts:
+          type: integer
+        devicesOnline:
+          type: integer
+        totalDevices:
+          type: integer
+        savingsToday:
+          type: number
+          description: Cost savings in USD today
+        co2Saved:
+          type: number
+          description: CO2 saved in kg
+      required: [currentPower, energyToday, energyTotal, batteryLevel, systemStatus, activeAlerts, devicesOnline, totalDevices, savingsToday, co2Saved]
+
+    EnergyHourPoint:
+      type: object
+      properties:
+        hour:
+          type: string
+        production:
+          type: number
+        consumption:
+          type: number
+      required: [hour, production, consumption]
+
+    AlertsSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        critical:
+          type: integer
+        warning:
+          type: integer
+        info:
+          type: integer
+        active:
+          type: integer
+        resolved:
+          type: integer
+      required: [total, critical, warning, info, active, resolved]
