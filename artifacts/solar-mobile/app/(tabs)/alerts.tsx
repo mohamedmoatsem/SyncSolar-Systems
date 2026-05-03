@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LangToggle } from "@/components/LangToggle";
+import { CachedBadge } from "@/components/CachedBadge";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { apiFetch } from "@/hooks/useApi";
 
 interface Alert {
@@ -30,14 +32,14 @@ interface Alert {
 function timeAgo(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return "< 1m";
+  if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
 }
 
-function AlertItem({ alert }: { alert: Alert }) {
+function AlertItem({ alert, isOnline }: { alert: Alert; isOnline: boolean }) {
   const colors = useColors();
   const { t } = useLanguage();
   const qc = useQueryClient();
@@ -53,8 +55,7 @@ function AlertItem({ alert }: { alert: Alert }) {
     : "info";
 
   const mutation = useMutation({
-    mutationFn: () =>
-      apiFetch(`/api/alerts/${alert.id}/resolve`, { method: "PATCH" }),
+    mutationFn: () => apiFetch(`/api/alerts/${alert.id}/resolve`, { method: "PATCH" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["alerts"] });
       qc.invalidateQueries({ queryKey: ["dashboard-summary"] });
@@ -71,11 +72,7 @@ function AlertItem({ alert }: { alert: Alert }) {
     <View
       style={[
         styles.alertCard,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderLeftColor: sevColor,
-        },
+        { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: sevColor },
       ]}
     >
       <View style={styles.alertHeader}>
@@ -98,17 +95,26 @@ function AlertItem({ alert }: { alert: Alert }) {
 
       {alert.status === "active" && (
         <TouchableOpacity
-          style={[styles.resolveBtn, { borderColor: colors.success + "55", backgroundColor: colors.success + "11" }]}
+          style={[
+            styles.resolveBtn,
+            {
+              borderColor: isOnline ? colors.success + "55" : colors.border,
+              backgroundColor: isOnline ? colors.success + "11" : colors.muted,
+              opacity: isOnline ? 1 : 0.5,
+            },
+          ]}
           onPress={() => mutation.mutate()}
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || !isOnline}
           activeOpacity={0.7}
         >
           {mutation.isPending ? (
             <ActivityIndicator size="small" color={colors.success} />
           ) : (
             <>
-              <Feather name="check" size={13} color={colors.success} />
-              <Text style={[styles.resolveTxt, { color: colors.success }]}>{t.resolve}</Text>
+              <Feather name="check" size={13} color={isOnline ? colors.success : colors.mutedForeground} />
+              <Text style={[styles.resolveTxt, { color: isOnline ? colors.success : colors.mutedForeground }]}>
+                {t.resolve}
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -123,10 +129,11 @@ export default function AlertsScreen() {
   const colors = useColors();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const isOnline = useNetworkStatus();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const [filter, setFilter] = useState<FilterKey>("active");
 
-  const { data, isLoading, refetch, isRefetching, isError } = useQuery<Alert[]>({
+  const { data, isLoading, refetch, isRefetching, isError, dataUpdatedAt } = useQuery<Alert[]>({
     queryKey: ["alerts", filter],
     queryFn: () => apiFetch(`/api/alerts?status=${filter}`),
     refetchInterval: 10000,
@@ -161,7 +168,10 @@ export default function AlertsScreen() {
                 </Text>
               )}
             </View>
-            <LangToggle />
+            <View style={styles.headerRight}>
+              <CachedBadge dataUpdatedAt={dataUpdatedAt} />
+              <LangToggle />
+            </View>
           </View>
 
           {filter === "active" && data && (criticalCount > 0 || warningCount > 0) && (
@@ -169,17 +179,13 @@ export default function AlertsScreen() {
               {criticalCount > 0 && (
                 <View style={[styles.summaryChip, { backgroundColor: colors.destructive + "22", borderColor: colors.destructive + "44" }]}>
                   <Feather name="alert-octagon" size={12} color={colors.destructive} />
-                  <Text style={[styles.summaryTxt, { color: colors.destructive }]}>
-                    {criticalCount} {t.critical}
-                  </Text>
+                  <Text style={[styles.summaryTxt, { color: colors.destructive }]}>{criticalCount} {t.critical}</Text>
                 </View>
               )}
               {warningCount > 0 && (
                 <View style={[styles.summaryChip, { backgroundColor: colors.warning + "22", borderColor: colors.warning + "44" }]}>
                   <Feather name="alert-triangle" size={12} color={colors.warning} />
-                  <Text style={[styles.summaryTxt, { color: colors.warning }]}>
-                    {warningCount} {t.warning}
-                  </Text>
+                  <Text style={[styles.summaryTxt, { color: colors.warning }]}>{warningCount} {t.warning}</Text>
                 </View>
               )}
             </View>
@@ -198,12 +204,7 @@ export default function AlertsScreen() {
                 onPress={() => setFilter(f.key)}
                 activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.filterTxt,
-                    { color: filter === f.key ? colors.primaryForeground : colors.mutedForeground },
-                  ]}
-                >
+                <Text style={[styles.filterTxt, { color: filter === f.key ? colors.primaryForeground : colors.mutedForeground }]}>
                   {f.label}
                 </Text>
               </TouchableOpacity>
@@ -217,7 +218,7 @@ export default function AlertsScreen() {
             <ActivityIndicator color={colors.primary} size="large" />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>{t.loading}</Text>
           </View>
-        ) : isError ? (
+        ) : isError && !data ? (
           <View style={styles.center}>
             <Feather name="wifi-off" size={40} color={colors.destructive} />
             <Text style={[styles.emptyText, { color: colors.destructive }]}>{t.errorLoad}</Text>
@@ -229,7 +230,7 @@ export default function AlertsScreen() {
           </View>
         )
       }
-      renderItem={({ item }) => <AlertItem alert={item} />}
+      renderItem={({ item }) => <AlertItem alert={item} isOnline={isOnline} />}
       ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
     />
   );
@@ -238,84 +239,43 @@ export default function AlertsScreen() {
 const styles = StyleSheet.create({
   list: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    paddingTop: 14,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingBottom: 14, paddingTop: 14,
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   headerSub: { fontSize: 12, marginTop: 2 },
-  summaryRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-  },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+  summaryRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
   summaryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderRadius: 20,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderRadius: 20,
   },
   summaryTxt: { fontSize: 11, fontWeight: "600" },
   filtersRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
-  filterBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
   filterTxt: { fontSize: 12, fontWeight: "600" },
   alertCard: {
-    marginHorizontal: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderLeftWidth: 3,
-    borderRadius: 10,
-    gap: 10,
+    marginHorizontal: 16, padding: 14, borderWidth: 1, borderLeftWidth: 3, borderRadius: 10, gap: 10,
   },
   alertHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   sevBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
   },
   sevText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 },
   alertTime: { fontSize: 11, flex: 1, textAlign: "right" },
   resolvedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
   },
   resolvedText: { fontSize: 10, fontWeight: "600" },
   alertMsg: { fontSize: 13, lineHeight: 19 },
   resolveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    minHeight: 32,
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingVertical: 7, paddingHorizontal: 12,
+    borderWidth: 1, borderRadius: 8, alignSelf: "flex-start", minHeight: 32,
   },
   resolveTxt: { fontSize: 12, fontWeight: "600" },
   center: { alignItems: "center", marginTop: 80, gap: 12 },

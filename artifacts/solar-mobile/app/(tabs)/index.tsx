@@ -13,12 +13,14 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CachedBadge } from "@/components/CachedBadge";
 import { EnergyChart } from "@/components/EnergyChart";
 import { LangToggle } from "@/components/LangToggle";
 import { MetricCard } from "@/components/MetricCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { apiFetch } from "@/hooks/useApi";
 
 interface Summary {
@@ -38,17 +40,25 @@ interface HourPoint { hour: string; production: number; consumption: number; }
 
 export default function DashboardScreen() {
   const colors = useColors();
-  const { t, isRTL } = useLanguage();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const isOnline = useNetworkStatus();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { data: summary, isLoading, refetch, isRefetching, isError } = useQuery<Summary>({
+  const {
+    data: summary,
+    isLoading,
+    refetch,
+    isRefetching,
+    isError,
+    dataUpdatedAt,
+  } = useQuery<Summary>({
     queryKey: ["dashboard-summary"],
     queryFn: () => apiFetch("/api/dashboard/summary"),
     refetchInterval: 10000,
   });
 
-  const { data: energy } = useQuery<HourPoint[]>({
+  const { data: energy, dataUpdatedAt: energyUpdatedAt } = useQuery<HourPoint[]>({
     queryKey: ["energy-today"],
     queryFn: () => apiFetch("/api/dashboard/energy-today"),
     refetchInterval: 60000,
@@ -80,7 +90,7 @@ export default function DashboardScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: topPad }]}>
+      <View style={[styles.header, { paddingTop: topPad, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
           <View style={[styles.logoWrap, { backgroundColor: colors.primary + "22" }]}>
             <Feather name="sun" size={18} color={colors.primary} />
@@ -88,14 +98,13 @@ export default function DashboardScreen() {
           <View>
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>Solar SCADA</Text>
             <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-              {t.liveData}
+              {isOnline ? t.liveData : t.offlineMode}
             </Text>
           </View>
         </View>
         <View style={styles.headerRight}>
-          {summary && (
-            <StatusBadge status={summary.systemStatus} label={statusLabel} />
-          )}
+          {summary && <StatusBadge status={summary.systemStatus} label={statusLabel} />}
+          <CachedBadge dataUpdatedAt={dataUpdatedAt} />
           <LangToggle />
         </View>
       </View>
@@ -105,30 +114,33 @@ export default function DashboardScreen() {
           <ActivityIndicator color={colors.primary} size="large" />
           <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>{t.loading}</Text>
         </View>
-      ) : isError ? (
+      ) : isError && !summary ? (
         <View style={styles.center}>
           <Feather name="wifi-off" size={40} color={colors.destructive} />
           <Text style={[styles.errorText, { color: colors.destructive }]}>{t.errorLoad}</Text>
-          <TouchableOpacity onPress={() => refetch()} style={[styles.retryBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+          <TouchableOpacity
+            onPress={() => refetch()}
+            style={[styles.retryBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+          >
             <Feather name="refresh-cw" size={14} color={colors.primary} />
             <Text style={[styles.retryTxt, { color: colors.primary }]}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
-      ) : (
+      ) : summary ? (
         <>
           <View style={styles.section}>
             <View style={styles.grid}>
               <MetricCard
                 label={t.currentPower}
-                value={summary ? Math.round(summary.currentPower) : 0}
+                value={Math.round(summary.currentPower)}
                 unit="W"
                 icon="zap"
                 iconColor={colors.primary}
-                trend={summary && summary.currentPower > 1000 ? "up" : undefined}
+                trend={summary.currentPower > 1000 ? "up" : undefined}
               />
               <MetricCard
                 label={t.batteryLevel}
-                value={summary ? Math.round(summary.batteryLevel) : 0}
+                value={Math.round(summary.batteryLevel)}
                 unit="%"
                 icon="battery-charging"
                 iconColor={batteryColor}
@@ -139,14 +151,14 @@ export default function DashboardScreen() {
             <View style={styles.grid}>
               <MetricCard
                 label={t.energyToday}
-                value={summary ? summary.energyToday.toFixed(1) : "0.0"}
+                value={summary.energyToday.toFixed(1)}
                 unit="kWh"
                 icon="sun"
                 iconColor={colors.chart1}
               />
               <MetricCard
                 label={t.savingsToday}
-                value={summary ? `$${summary.savingsToday.toFixed(2)}` : "$0.00"}
+                value={`$${summary.savingsToday.toFixed(2)}`}
                 icon="dollar-sign"
                 iconColor={colors.success}
               />
@@ -154,16 +166,16 @@ export default function DashboardScreen() {
             <View style={styles.grid}>
               <MetricCard
                 label={t.co2Saved}
-                value={summary ? summary.co2Saved.toFixed(1) : "0.0"}
+                value={summary.co2Saved.toFixed(1)}
                 unit="kg"
                 icon="wind"
                 iconColor={colors.secondary}
               />
               <MetricCard
                 label={t.activeAlerts}
-                value={summary ? summary.activeAlerts : 0}
+                value={summary.activeAlerts}
                 icon="bell"
-                iconColor={summary && summary.activeAlerts > 0 ? colors.destructive : colors.mutedForeground}
+                iconColor={summary.activeAlerts > 0 ? colors.destructive : colors.mutedForeground}
               />
             </View>
           </View>
@@ -174,8 +186,8 @@ export default function DashboardScreen() {
               <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{t.devicesOnline}</Text>
               <View style={{ flex: 1 }} />
               <Text style={[styles.infoValue, { color: colors.foreground }]}>
-                {summary?.devicesOnline ?? 0}
-                <Text style={{ color: colors.mutedForeground }}>/{summary?.totalDevices ?? 0}</Text>
+                {summary.devicesOnline}
+                <Text style={{ color: colors.mutedForeground }}>/{summary.totalDevices}</Text>
               </Text>
             </View>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -184,7 +196,7 @@ export default function DashboardScreen() {
               <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{t.energyTotal}</Text>
               <View style={{ flex: 1 }} />
               <Text style={[styles.infoValue, { color: colors.foreground }]}>
-                {summary?.energyTotal?.toFixed(1) ?? "0.0"}
+                {summary.energyTotal.toFixed(1)}
                 <Text style={{ color: colors.mutedForeground }}> kWh</Text>
               </Text>
             </View>
@@ -199,7 +211,7 @@ export default function DashboardScreen() {
             />
           )}
         </>
-      )}
+      ) : null}
     </ScrollView>
   );
 }
@@ -213,9 +225,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 14,
     paddingTop: 14,
+    borderBottomWidth: 1,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" },
   logoWrap: {
     width: 36,
     height: 36,

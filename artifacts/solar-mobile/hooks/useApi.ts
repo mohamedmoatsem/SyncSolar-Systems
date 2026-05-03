@@ -21,13 +21,14 @@ export async function apiFetch<T = unknown>(path: string, options?: RequestInit)
       throw new Error(`HTTP ${res.status}: ${text}`);
     }
     return res.json() as Promise<T>;
+  } catch (err: any) {
+    if (err.name === "AbortError") throw new Error("Request timed out");
+    throw err;
   } finally {
     clearTimeout(timeout);
   }
 }
 
 export function apiUrl(path: string) {
-  return process.env.EXPO_PUBLIC_DOMAIN
-    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}${path}`
-    : path;
+  return BASE ? `${BASE}${path}` : path;
 }

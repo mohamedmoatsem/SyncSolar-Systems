@@ -70,6 +70,8 @@ const AR = {
   filterBy: "تصفية",
   resolvedAt: "وقت الحل",
   occuredAt: "وقت الحدوث",
+  cachedData: "بيانات محفوظة",
+  offlineMode: "وضع بدون إنترنت",
 };
 
 const EN: typeof AR = {
@@ -139,6 +141,8 @@ const EN: typeof AR = {
   filterBy: "Filter",
   resolvedAt: "Resolved At",
   occuredAt: "Occurred At",
+  cachedData: "Cached Data",
+  offlineMode: "Offline Mode",
 };
 
 interface LangCtx {

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LangToggle } from "@/components/LangToggle";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { fetch as expoFetch } from "expo/fetch";
 
 interface Message {
@@ -45,8 +46,9 @@ async function getOrCreateConv(title: string): Promise<number> {
 
 export default function AIScreen() {
   const colors = useColors();
-  const { t, isRTL } = useLanguage();
+  const { t, lang } = useLanguage();
   const insets = useSafeAreaInsets();
+  const isOnline = useNetworkStatus();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const greetingMsg = useMemo<Message>(
@@ -54,10 +56,20 @@ export default function AIScreen() {
     [t.aiGreeting]
   );
 
+  const offlineMsg = useMemo<Message>(
+    () => ({
+      id: "offline-note",
+      role: "assistant",
+      content: lang === "ar"
+        ? "⚠️ أنت غير متصل بالإنترنت. المساعد الذكي يحتاج اتصالاً للعمل."
+        : "⚠️ You're offline. The AI assistant requires an internet connection.",
+    }),
+    [lang]
+  );
+
   const [messages, setMessages] = useState<Message[]>([greetingMsg]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const flatRef = useRef<FlatList>(null);
 
   useEffect(() => {
     setMessages((prev) =>
@@ -68,13 +80,20 @@ export default function AIScreen() {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || streaming) return;
-    setInput("");
 
+    if (!isOnline) {
+      const id = `offline-${Date.now()}`;
+      setMessages((prev) => [offlineMsg, { id, role: "user", content: text }, ...prev]);
+      setInput("");
+      return;
+    }
+
+    setInput("");
     const userMsg: Message = { id: `u-${Date.now()}`, role: "user", content: text };
     const assistantId = `a-${Date.now() + 1}`;
-    const placeholderMsg: Message = { id: assistantId, role: "assistant", content: "", pending: true };
+    const placeholder: Message = { id: assistantId, role: "assistant", content: "", pending: true };
 
-    setMessages((prev) => [placeholderMsg, userMsg, ...prev]);
+    setMessages((prev) => [placeholder, userMsg, ...prev]);
     setStreaming(true);
 
     try {
@@ -109,9 +128,7 @@ export default function AIScreen() {
                 accumulated += delta;
                 const snap = accumulated;
                 setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: snap, pending: false } : m
-                  )
+                  prev.map((m) => m.id === assistantId ? { ...m, content: snap, pending: false } : m)
                 );
               } catch {}
             }
@@ -121,17 +138,17 @@ export default function AIScreen() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content: "⚠️ No response received.", pending: false }
+                ? { ...m, content: lang === "ar" ? "⚠️ لم يصل أي رد." : "⚠️ No response received.", pending: false }
                 : m
             )
           );
         }
       }
-    } catch (err) {
+    } catch {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, content: "⚠️ Error: Could not reach AI service. Check your connection.", pending: false }
+            ? { ...m, content: lang === "ar" ? "⚠️ خطأ في الاتصال بالمساعد الذكي." : "⚠️ Error: Could not reach AI service.", pending: false }
             : m
         )
       );
@@ -160,9 +177,12 @@ export default function AIScreen() {
           </View>
           <View>
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t.aiAssistant}</Text>
-            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-              Gemini AI · Solar Expert
-            </Text>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, { backgroundColor: isOnline ? colors.success : colors.warning }]} />
+              <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+                {isOnline ? "Gemini AI · Online" : (lang === "ar" ? "غير متصل" : "Offline")}
+              </Text>
+            </View>
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -179,7 +199,6 @@ export default function AIScreen() {
       </View>
 
       <FlatList
-        ref={flatRef}
         data={messages}
         keyExtractor={(m) => m.id}
         inverted
@@ -209,15 +228,7 @@ export default function AIScreen() {
                     <Text style={[styles.typingText, { color: colors.mutedForeground }]}>...</Text>
                   </View>
                 ) : (
-                  <Text
-                    style={[
-                      styles.bubbleText,
-                      {
-                        color: isUser ? colors.primaryForeground : colors.foreground,
-                        textAlign: isUser ? (isRTL ? "right" : "left") : (isRTL ? "right" : "left"),
-                      },
-                    ]}
-                  >
+                  <Text style={[styles.bubbleText, { color: isUser ? colors.primaryForeground : colors.foreground }]}>
                     {item.content}
                   </Text>
                 )}
@@ -227,6 +238,15 @@ export default function AIScreen() {
         }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       />
+
+      {!isOnline && (
+        <View style={[styles.offlineBanner, { backgroundColor: colors.warning + "22", borderTopColor: colors.warning + "44" }]}>
+          <Feather name="wifi-off" size={13} color={colors.warning} />
+          <Text style={[styles.offlineTxt, { color: colors.warning }]}>
+            {lang === "ar" ? "المساعد الذكي يحتاج اتصالاً بالإنترنت" : "AI assistant requires internet connection"}
+          </Text>
+        </View>
+      )}
 
       <View
         style={[
@@ -239,31 +259,22 @@ export default function AIScreen() {
         ]}
       >
         <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.muted,
-              color: colors.foreground,
-              borderColor: colors.border,
-            },
-          ]}
+          style={[styles.input, { backgroundColor: colors.muted, color: colors.foreground, borderColor: colors.border }]}
           value={input}
           onChangeText={setInput}
           placeholder={t.typeMessage}
           placeholderTextColor={colors.mutedForeground}
           multiline
           maxLength={1000}
+          editable={isOnline}
           onSubmitEditing={Platform.OS !== "web" ? sendMessage : undefined}
           returnKeyType="send"
           blurOnSubmit={Platform.OS !== "web"}
         />
         <TouchableOpacity
-          style={[
-            styles.sendBtn,
-            { backgroundColor: canSend ? colors.primary : colors.muted },
-          ]}
+          style={[styles.sendBtn, { backgroundColor: canSend && isOnline ? colors.primary : colors.muted }]}
           onPress={sendMessage}
-          disabled={!canSend}
+          disabled={!canSend || !isOnline}
           activeOpacity={0.7}
         >
           {streaming ? (
@@ -272,7 +283,7 @@ export default function AIScreen() {
             <Feather
               name="send"
               size={18}
-              color={canSend ? colors.primaryForeground : colors.mutedForeground}
+              color={canSend && isOnline ? colors.primaryForeground : colors.mutedForeground}
             />
           )}
         </TouchableOpacity>
@@ -284,27 +295,19 @@ export default function AIScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    paddingTop: 14,
-    borderBottomWidth: 1,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingBottom: 14, paddingTop: 14, borderBottomWidth: 1,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   aiIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 17, fontWeight: "700" },
-  headerSub: { fontSize: 10, marginTop: 1 },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  headerSub: { fontSize: 10 },
   newChatBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1,
   },
   newChatTxt: { fontSize: 12, fontWeight: "600" },
   messageList: { flex: 1 },
@@ -318,29 +321,18 @@ const styles = StyleSheet.create({
   bubbleText: { fontSize: 14, lineHeight: 20 },
   typingRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   typingText: { fontSize: 14 },
+  offlineBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1,
+  },
+  offlineTxt: { fontSize: 12, fontWeight: "500" },
   inputBar: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
+    flexDirection: "row", alignItems: "flex-end", gap: 10,
+    paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1,
   },
   input: {
-    flex: 1,
-    minHeight: 42,
-    maxHeight: 120,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    fontSize: 14,
-    borderWidth: 1,
+    flex: 1, minHeight: 42, maxHeight: 120, borderRadius: 22,
+    paddingHorizontal: 16, paddingVertical: 11, fontSize: 14, borderWidth: 1,
   },
-  sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  sendBtn: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
 });

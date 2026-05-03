@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -15,7 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LangToggle } from "@/components/LangToggle";
+import { CachedBadge } from "@/components/CachedBadge";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { apiFetch } from "@/hooks/useApi";
 
 interface Device {
@@ -44,7 +47,7 @@ const TYPE_COLORS: Record<string, string> = {
   pump: "#f59e0b",
 };
 
-function DeviceItem({ device }: { device: Device }) {
+function DeviceItem({ device, isOnline }: { device: Device; isOnline: boolean }) {
   const colors = useColors();
   const { t } = useLanguage();
   const qc = useQueryClient();
@@ -80,27 +83,28 @@ function DeviceItem({ device }: { device: Device }) {
           <Feather name={icon} size={20} color={typeColor} />
         </View>
         <View style={styles.deviceInfo}>
-          <Text style={[styles.deviceName, { color: colors.foreground }]} numberOfLines={1}>
-            {device.name}
-          </Text>
+          <Text style={[styles.deviceName, { color: colors.foreground }]} numberOfLines={1}>{device.name}</Text>
           <Text style={[styles.deviceMeta, { color: colors.mutedForeground }]} numberOfLines={1}>
             {typeLabel} · {device.location}
           </Text>
           <View style={styles.deviceBottom}>
             <StatusBadge status={device.status} label={statusLabel} size="sm" />
-            <Text style={[styles.powerRating, { color: colors.mutedForeground }]}>
-              {device.powerRating}W
-            </Text>
+            <Text style={[styles.powerRating, { color: colors.mutedForeground }]}>{device.powerRating}W</Text>
           </View>
         </View>
-        <Switch
-          value={device.isEnabled}
-          onValueChange={(v) => mutation.mutate(v)}
-          trackColor={{ false: colors.muted, true: colors.primary + "88" }}
-          thumbColor={device.isEnabled ? colors.primary : colors.mutedForeground}
-          disabled={mutation.isPending}
-          style={{ opacity: mutation.isPending ? 0.5 : 1 }}
-        />
+        <View style={styles.switchWrap}>
+          {!isOnline && (
+            <Feather name="wifi-off" size={12} color={colors.mutedForeground} style={{ marginBottom: 4 }} />
+          )}
+          <Switch
+            value={device.isEnabled}
+            onValueChange={(v) => mutation.mutate(v)}
+            trackColor={{ false: colors.muted, true: colors.primary + "88" }}
+            thumbColor={device.isEnabled ? colors.primary : colors.mutedForeground}
+            disabled={mutation.isPending || !isOnline}
+            style={{ opacity: mutation.isPending || !isOnline ? 0.5 : 1 }}
+          />
+        </View>
       </View>
     </View>
   );
@@ -110,9 +114,10 @@ export default function DevicesScreen() {
   const colors = useColors();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const isOnline = useNetworkStatus();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { data, isLoading, refetch, isRefetching, isError } = useQuery<Device[]>({
+  const { data, isLoading, refetch, isRefetching, isError, dataUpdatedAt } = useQuery<Device[]>({
     queryKey: ["devices"],
     queryFn: () => apiFetch("/api/devices"),
     refetchInterval: 15000,
@@ -141,8 +146,22 @@ export default function DevicesScreen() {
                 </Text>
               )}
             </View>
-            <LangToggle />
+            <View style={styles.headerRight}>
+              <CachedBadge dataUpdatedAt={dataUpdatedAt} />
+              <LangToggle />
+            </View>
           </View>
+
+          {!isOnline && data && (
+            <View style={[styles.offlineNote, { backgroundColor: colors.warning + "18", borderColor: colors.warning + "44" }]}>
+              <Feather name="lock" size={12} color={colors.warning} />
+              <Text style={[styles.offlineNoteText, { color: colors.warning }]}>
+                {t.lang === "ar"
+                  ? "التحكم بالأجهزة متوقف في وضع بدون إنترنت"
+                  : "Device control disabled while offline"}
+              </Text>
+            </View>
+          )}
 
           {data && (
             <View style={[styles.statsRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -157,9 +176,7 @@ export default function DevicesScreen() {
               </View>
               <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.destructive }]}>
-                  {totalCount - enabledCount}
-                </Text>
+                <Text style={[styles.statValue, { color: colors.destructive }]}>{totalCount - enabledCount}</Text>
                 <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t.disabled}</Text>
               </View>
             </View>
@@ -184,7 +201,7 @@ export default function DevicesScreen() {
           </View>
         )
       }
-      renderItem={({ item }) => <DeviceItem device={item} />}
+      renderItem={({ item }) => <DeviceItem device={item} isOnline={isOnline} />}
       ItemSeparatorComponent={() => (
         <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }} />
       )}
@@ -195,57 +212,40 @@ export default function DevicesScreen() {
 const styles = StyleSheet.create({
   list: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    paddingTop: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#202940",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingBottom: 14, paddingTop: 14,
+    borderBottomWidth: 1, borderBottomColor: "#202940",
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   headerSub: { fontSize: 12, marginTop: 2 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+  offlineNote: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginHorizontal: 16, marginTop: 10, padding: 10,
+    borderWidth: 1, borderRadius: 8,
+  },
+  offlineNoteText: { fontSize: 12, fontWeight: "500", flex: 1 },
   statsRow: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderRadius: 10,
-    overflow: "hidden",
+    flexDirection: "row", marginHorizontal: 16, marginTop: 12, marginBottom: 8,
+    borderWidth: 1, borderRadius: 10, overflow: "hidden",
   },
   statItem: { flex: 1, alignItems: "center", paddingVertical: 12 },
   statValue: { fontSize: 20, fontWeight: "700" },
   statLabel: { fontSize: 11, fontWeight: "500", marginTop: 2 },
   statDivider: { width: 1 },
-  deviceCard: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginVertical: 0,
-    overflow: "hidden",
-  },
+  deviceCard: { flexDirection: "row", marginHorizontal: 16, overflow: "hidden" },
   typeBar: { width: 3 },
   deviceContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 12,
+    flex: 1, flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 14, paddingVertical: 14, gap: 12,
   },
-  deviceIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  deviceIcon: { width: 46, height: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   deviceInfo: { flex: 1, gap: 4 },
   deviceName: { fontSize: 14, fontWeight: "600" },
   deviceMeta: { fontSize: 12 },
   deviceBottom: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
   powerRating: { fontSize: 11, fontWeight: "600" },
+  switchWrap: { alignItems: "center" },
   center: { alignItems: "center", marginTop: 80, gap: 12 },
   emptyText: { fontSize: 14, marginTop: 8 },
 });
