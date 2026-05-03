@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "koOLu1yu4rS4ngJyZ-ixN"
+uri = "file://artifacts/solar-mobile/assets/images/icon.png"
+type = "image"
+title = "generated_image"
