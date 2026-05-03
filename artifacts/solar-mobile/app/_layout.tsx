@@ -14,19 +14,12 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: 1,
       gcTime: 5 * 60 * 1000,
+      staleTime: 0,
     },
   },
 });
-
-function RootLayoutNav() {
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
-  );
-}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -40,7 +33,10 @@ export default function RootLayout() {
           <LanguageProvider>
             <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#090e1a" }}>
               <KeyboardProvider>
-                <RootLayoutNav />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
               </KeyboardProvider>
             </GestureHandlerRootView>
           </LanguageProvider>

@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EnergyChart } from "@/components/EnergyChart";
+import { LangToggle } from "@/components/LangToggle";
 import { MetricCard } from "@/components/MetricCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useColors } from "@/hooks/useColors";
@@ -39,10 +40,9 @@ export default function DashboardScreen() {
   const colors = useColors();
   const { t, isRTL } = useLanguage();
   const insets = useSafeAreaInsets();
-  const webTopPad = Platform.OS === "web" ? 67 : 0;
-  const webBotPad = Platform.OS === "web" ? 34 : 0;
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { data: summary, isLoading, refetch, isError } = useQuery<Summary>({
+  const { data: summary, isLoading, refetch, isRefetching, isError } = useQuery<Summary>({
     queryKey: ["dashboard-summary"],
     queryFn: () => apiFetch("/api/dashboard/summary"),
     refetchInterval: 10000,
@@ -54,88 +54,140 @@ export default function DashboardScreen() {
     refetchInterval: 60000,
   });
 
-  const statusLabel = summary
-    ? summary.systemStatus === "normal" ? t.normal
-    : summary.systemStatus === "warning" ? t.warning
-    : summary.systemStatus === "fault" ? t.fault
-    : t.offline
-    : "-";
+  const statusLabel =
+    summary?.systemStatus === "normal" ? t.normal
+    : summary?.systemStatus === "warning" ? t.warning
+    : summary?.systemStatus === "fault" ? t.fault
+    : summary ? t.offline : "-";
+
+  const batteryPct = summary?.batteryLevel ?? 0;
+  const batteryColor =
+    batteryPct >= 60 ? colors.success
+    : batteryPct >= 30 ? colors.warning
+    : colors.destructive;
 
   return (
     <ScrollView
       style={[styles.scroll, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingBottom: 100 + webBotPad, paddingTop: webTopPad }}
-      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
+      contentContainerStyle={{ paddingBottom: 110 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching && !isLoading}
+          onRefresh={refetch}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
+      showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Solar SCADA</Text>
-        {summary && (
-          <StatusBadge status={summary.systemStatus} label={statusLabel} />
-        )}
+      <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: topPad }]}>
+        <View style={styles.headerLeft}>
+          <View style={[styles.logoWrap, { backgroundColor: colors.primary + "22" }]}>
+            <Feather name="sun" size={18} color={colors.primary} />
+          </View>
+          <View>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>Solar SCADA</Text>
+            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+              {t.liveData}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.headerRight}>
+          {summary && (
+            <StatusBadge status={summary.systemStatus} label={statusLabel} />
+          )}
+          <LangToggle />
+        </View>
       </View>
 
       {isLoading && !summary ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>{t.loading}</Text>
+        </View>
       ) : isError ? (
         <View style={styles.center}>
-          <Text style={{ color: colors.destructive }}>{t.errorLoad}</Text>
-          <TouchableOpacity onPress={() => refetch()} style={styles.retryBtn}>
-            <Text style={{ color: colors.primary }}>{t.retry}</Text>
+          <Feather name="wifi-off" size={40} color={colors.destructive} />
+          <Text style={[styles.errorText, { color: colors.destructive }]}>{t.errorLoad}</Text>
+          <TouchableOpacity onPress={() => refetch()} style={[styles.retryBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <Feather name="refresh-cw" size={14} color={colors.primary} />
+            <Text style={[styles.retryTxt, { color: colors.primary }]}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <>
-          <View style={styles.grid}>
-            <MetricCard
-              label={t.currentPower}
-              value={summary ? Math.round(summary.currentPower) : 0}
-              unit="W"
-              icon="zap"
-              iconColor={colors.primary}
-            />
-            <MetricCard
-              label={t.batteryLevel}
-              value={summary ? Math.round(summary.batteryLevel) : 0}
-              unit="%"
-              icon="battery-charging"
-              iconColor={summary && summary.batteryLevel < 20 ? colors.destructive : colors.success}
-            />
+          <View style={styles.section}>
+            <View style={styles.grid}>
+              <MetricCard
+                label={t.currentPower}
+                value={summary ? Math.round(summary.currentPower) : 0}
+                unit="W"
+                icon="zap"
+                iconColor={colors.primary}
+                trend={summary && summary.currentPower > 1000 ? "up" : undefined}
+              />
+              <MetricCard
+                label={t.batteryLevel}
+                value={summary ? Math.round(summary.batteryLevel) : 0}
+                unit="%"
+                icon="battery-charging"
+                iconColor={batteryColor}
+                progressValue={batteryPct}
+                progressColor={batteryColor}
+              />
+            </View>
+            <View style={styles.grid}>
+              <MetricCard
+                label={t.energyToday}
+                value={summary ? summary.energyToday.toFixed(1) : "0.0"}
+                unit="kWh"
+                icon="sun"
+                iconColor={colors.chart1}
+              />
+              <MetricCard
+                label={t.savingsToday}
+                value={summary ? `$${summary.savingsToday.toFixed(2)}` : "$0.00"}
+                icon="dollar-sign"
+                iconColor={colors.success}
+              />
+            </View>
+            <View style={styles.grid}>
+              <MetricCard
+                label={t.co2Saved}
+                value={summary ? summary.co2Saved.toFixed(1) : "0.0"}
+                unit="kg"
+                icon="wind"
+                iconColor={colors.secondary}
+              />
+              <MetricCard
+                label={t.activeAlerts}
+                value={summary ? summary.activeAlerts : 0}
+                icon="bell"
+                iconColor={summary && summary.activeAlerts > 0 ? colors.destructive : colors.mutedForeground}
+              />
+            </View>
           </View>
-          <View style={styles.grid}>
-            <MetricCard
-              label={t.energyToday}
-              value={summary ? summary.energyToday : 0}
-              unit="kWh"
-              icon="sun"
-              iconColor={colors.primary}
-            />
-            <MetricCard
-              label={t.activeAlerts}
-              value={summary ? summary.activeAlerts : 0}
-              icon="bell"
-              iconColor={summary && summary.activeAlerts > 0 ? colors.destructive : colors.mutedForeground}
-            />
-          </View>
-          <View style={styles.grid}>
-            <MetricCard
-              label={t.savingsToday}
-              value={summary ? `$${summary.savingsToday}` : "$0"}
-              icon="dollar-sign"
-              iconColor={colors.success}
-            />
-            <MetricCard
-              label={t.co2Saved}
-              value={summary ? `${summary.co2Saved}` : "0"}
-              unit="kg"
-              icon="wind"
-              iconColor={colors.secondary}
-            />
-          </View>
-          <View style={[styles.devicesRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="cpu" size={16} color={colors.secondary} />
-            <Text style={[styles.devicesText, { color: colors.foreground }]}>
-              {summary?.devicesOnline ?? 0}/{summary?.totalDevices ?? 0} {t.devicesOnline}
-            </Text>
+
+          <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.infoRow}>
+              <Feather name="cpu" size={15} color={colors.secondary} />
+              <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{t.devicesOnline}</Text>
+              <View style={{ flex: 1 }} />
+              <Text style={[styles.infoValue, { color: colors.foreground }]}>
+                {summary?.devicesOnline ?? 0}
+                <Text style={{ color: colors.mutedForeground }}>/{summary?.totalDevices ?? 0}</Text>
+              </Text>
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.infoRow}>
+              <Feather name="database" size={15} color={colors.secondary} />
+              <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{t.energyTotal}</Text>
+              <View style={{ flex: 1 }} />
+              <Text style={[styles.infoValue, { color: colors.foreground }]}>
+                {summary?.energyTotal?.toFixed(1) ?? "0.0"}
+                <Text style={{ color: colors.mutedForeground }}> kWh</Text>
+              </Text>
+            </View>
           </View>
 
           {energy && energy.length > 0 && (
@@ -159,32 +211,57 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+    paddingBottom: 14,
+    paddingTop: 14,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    letterSpacing: -0.3,
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  logoWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  headerTitle: { fontSize: 18, fontWeight: "700", letterSpacing: -0.3 },
+  headerSub: { fontSize: 10, fontWeight: "500", marginTop: 1 },
+  section: { paddingTop: 4 },
   grid: {
     flexDirection: "row",
     gap: 10,
     marginHorizontal: 16,
     marginTop: 10,
   },
-  devicesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  infoCard: {
     marginHorizontal: 16,
     marginTop: 10,
-    marginBottom: 14,
-    padding: 12,
+    marginBottom: 4,
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 8,
+    overflow: "hidden",
   },
-  devicesText: { fontSize: 13, fontWeight: "500" },
-  center: { alignItems: "center", marginTop: 60, gap: 12 },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 8 },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  infoLabel: { fontSize: 13, fontWeight: "500" },
+  infoValue: { fontSize: 15, fontWeight: "700" },
+  divider: { height: 1, marginHorizontal: 14 },
+  center: { alignItems: "center", marginTop: 80, gap: 14 },
+  loadingText: { fontSize: 13 },
+  errorText: { fontSize: 14, fontWeight: "500" },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  retryTxt: { fontSize: 13, fontWeight: "600" },
 });
