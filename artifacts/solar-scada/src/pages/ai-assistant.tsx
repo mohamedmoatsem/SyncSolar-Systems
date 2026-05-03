@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bot, Send, Image as ImageIcon, Plus, Trash2, X, MessageSquare, Loader2, WifiOff, ChevronLeft } from "lucide-react";
+import { Bot, Send, Image as ImageIcon, Plus, Trash2, X, MessageSquare, Loader2, WifiOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { useOffline } from "@/hooks/useOffline";
+import { useLanguage } from "@/contexts/language-context";
 import ReactMarkdown from "react-markdown";
 import { format } from "date-fns";
 
@@ -22,6 +23,7 @@ export default function AiAssistant() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isOffline = useOffline();
+  const { t, isRTL } = useLanguage();
 
   const [activeConvId, setActiveConvId] = useState<number | null>(null);
   const [inputText, setInputText] = useState("");
@@ -49,7 +51,7 @@ export default function AiAssistant() {
 
   const handleCreateConversation = () => {
     createConv.mutate(
-      { data: { title: "New Diagnostic Session" } },
+      { data: { title: t.ai.new_session } },
       {
         onSuccess: (newConv) => {
           queryClient.invalidateQueries({ queryKey: getListGeminiConversationsQueryKey() });
@@ -85,9 +87,7 @@ export default function AiAssistant() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setSelectedImage(event.target?.result as string);
-    };
+    reader.onload = (event) => setSelectedImage(event.target?.result as string);
     reader.readAsDataURL(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -120,11 +120,7 @@ export default function AiAssistant() {
     });
 
     if (isOffline) {
-      toast({
-        variant: "destructive",
-        title: "لا يوجد اتصال بالإنترنت",
-        description: "وكيل الذكاء الاصطناعي يتطلب اتصالاً بالإنترنت.",
-      });
+      toast({ variant: "destructive", title: t.ai.offline_title, description: t.ai.offline_desc });
       setIsStreaming(false);
       return;
     }
@@ -156,22 +152,14 @@ export default function AiAssistant() {
           if (line.startsWith("data: ")) {
             try {
               const data = JSON.parse(line.slice(6));
-              if (data.content) {
-                setStreamingText((prev) => prev + data.content);
-              }
-            } catch (err) {
-              console.error("Error parsing SSE JSON", err);
-            }
+              if (data.content) setStreamingText((prev) => prev + data.content);
+            } catch {}
           }
         }
       }
     } catch (error) {
       console.error(error);
-      toast({
-        variant: "destructive",
-        title: "Communication Error",
-        description: "Failed to receive complete response from AI.",
-      });
+      toast({ variant: "destructive", title: t.ai.error_title, description: t.ai.error_desc });
     } finally {
       setIsStreaming(false);
       setStreamingText("");
@@ -187,11 +175,7 @@ export default function AiAssistant() {
         <div className="flex flex-col gap-2">
           {parsed.text && <p className="whitespace-pre-wrap">{parsed.text}</p>}
           {parsed.imageData && (
-            <img
-              src={parsed.imageData}
-              alt="Uploaded context"
-              className="max-w-[200px] sm:max-w-sm rounded-md border border-border object-contain"
-            />
+            <img src={parsed.imageData} alt="Uploaded" className="max-w-[200px] sm:max-w-sm rounded-md border border-border object-contain" />
           )}
         </div>
       );
@@ -200,23 +184,19 @@ export default function AiAssistant() {
     }
   };
 
+  const BackIcon = isRTL ? ChevronRight : ChevronLeft;
+
   return (
     <div className="flex h-full w-full gap-0 sm:gap-4 overflow-hidden">
-      {/* Sidebar — full on desktop, conditional on mobile */}
+      {/* Sessions Sidebar */}
       <div
-        className={`
-          flex flex-col rounded-md border border-border bg-card
-          transition-all duration-300
-          ${showSidebar
-            ? "w-full sm:w-72 flex-shrink-0"
-            : "hidden sm:flex sm:w-72 flex-shrink-0"
-          }
-        `}
+        className={`flex flex-col rounded-md border border-border bg-card transition-all duration-300
+          ${showSidebar ? "w-full sm:w-72 flex-shrink-0" : "hidden sm:flex sm:w-72 flex-shrink-0"}`}
       >
         <div className="flex items-center justify-between border-b border-border p-3 sm:p-4">
-          <div className="flex items-center gap-2 font-mono text-sm font-semibold tracking-tight text-primary">
-            <Bot className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-xs sm:text-sm">SESSIONS</span>
+          <div className="flex items-center gap-2 font-mono text-xs sm:text-sm font-semibold tracking-tight text-primary">
+            <Bot className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            {t.ai.sessions}
           </div>
           <Button
             variant="outline"
@@ -225,23 +205,15 @@ export default function AiAssistant() {
             onClick={handleCreateConversation}
             disabled={createConv.isPending}
           >
-            {createConv.isPending ? (
-              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-            ) : (
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-            )}
+            {createConv.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3 sm:h-4 sm:w-4" />}
           </Button>
         </div>
 
         <ScrollArea className="flex-1">
           {isLoadingConvs ? (
-            <div className="p-4 text-center text-sm font-mono text-muted-foreground">
-              LOADING...
-            </div>
+            <div className="p-4 text-center text-sm font-mono text-muted-foreground">{t.ai.loading}</div>
           ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              No active sessions
-            </div>
+            <div className="p-4 text-center text-sm text-muted-foreground">{t.ai.no_sessions}</div>
           ) : (
             <div className="flex flex-col p-2 gap-1">
               {conversations.map((conv) => (
@@ -273,29 +245,26 @@ export default function AiAssistant() {
         </ScrollArea>
       </div>
 
-      {/* Main Chat Area */}
+      {/* Chat Area — always LTR layout for message bubbles */}
       <div
-        className={`
-          flex-1 flex-col rounded-md border border-border bg-card min-w-0
-          ${showSidebar ? "hidden sm:flex" : "flex"}
-        `}
+        className={`flex-1 flex-col rounded-md border border-border bg-card min-w-0
+          ${showSidebar ? "hidden sm:flex" : "flex"}`}
+        dir="ltr"
       >
         {activeConvId ? (
           <>
-            {/* Chat Header */}
             <div className="flex h-12 sm:h-14 items-center border-b border-border px-3 sm:px-4 font-mono text-xs sm:text-sm gap-3">
               <button
                 onClick={() => setShowSidebar(true)}
                 className="sm:hidden text-muted-foreground hover:text-foreground p-1"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <BackIcon className="h-4 w-4" />
               </button>
-              <span className="text-secondary">SESSION:</span>
+              <span className="text-secondary">{t.ai.session_id}:</span>
               <span className="text-muted-foreground">{activeConvId.toString().padStart(4, "0")}</span>
-              {isLoadingConv && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ml-2" />}
+              {isLoadingConv && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground ms-2" />}
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4" ref={scrollRef}>
               <div className="flex flex-col gap-4 sm:gap-6">
                 {activeConversation?.messages.map((msg, idx) => (
@@ -303,40 +272,23 @@ export default function AiAssistant() {
                     key={msg.id || idx}
                     className={`flex gap-2 sm:gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                   >
-                    <div
-                      className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-sm border ${
-                        msg.role === "user"
-                          ? "border-secondary/20 bg-secondary/10 text-secondary"
-                          : "border-primary/20 bg-primary/10 text-primary"
-                      }`}
-                    >
-                      {msg.role === "user" ? (
-                        <div className="text-[10px] font-mono">OP</div>
-                      ) : (
-                        <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
-                      )}
+                    <div className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-sm border ${
+                      msg.role === "user"
+                        ? "border-secondary/20 bg-secondary/10 text-secondary"
+                        : "border-primary/20 bg-primary/10 text-primary"
+                    }`}>
+                      {msg.role === "user" ? <div className="text-[10px] font-mono">OP</div> : <Bot className="h-3 w-3 sm:h-4 sm:w-4" />}
                     </div>
-
-                    <div
-                      className={`flex max-w-[85%] sm:max-w-[80%] flex-col gap-1 ${
-                        msg.role === "user" ? "items-end" : "items-start"
-                      }`}
-                    >
+                    <div className={`flex max-w-[85%] sm:max-w-[80%] flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
                       <div className="text-[10px] font-mono text-muted-foreground">
                         {format(new Date(msg.createdAt), "HH:mm:ss")}
                       </div>
-                      <div
-                        className={`rounded-md border p-2.5 sm:p-3 text-xs sm:text-sm ${
-                          msg.role === "user"
-                            ? "border-secondary/20 bg-secondary/5 text-foreground"
-                            : "border-primary/20 bg-primary/5 text-foreground prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-background prose-pre:border prose-pre:border-border"
-                        }`}
-                      >
-                        {msg.role === "user" ? (
-                          renderMessageContent(msg.content)
-                        ) : (
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        )}
+                      <div className={`rounded-md border p-2.5 sm:p-3 text-xs sm:text-sm ${
+                        msg.role === "user"
+                          ? "border-secondary/20 bg-secondary/5 text-foreground"
+                          : "border-primary/20 bg-primary/5 text-foreground prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-background prose-pre:border prose-pre:border-border"
+                      }`}>
+                        {msg.role === "user" ? renderMessageContent(msg.content) : <ReactMarkdown>{msg.content}</ReactMarkdown>}
                       </div>
                     </div>
                   </div>
@@ -348,9 +300,7 @@ export default function AiAssistant() {
                       <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
                     </div>
                     <div className="flex max-w-[85%] flex-col gap-1 items-start">
-                      <div className="text-[10px] font-mono text-primary animate-pulse">
-                        PROCESSING...
-                      </div>
+                      <div className="text-[10px] font-mono text-primary animate-pulse">{t.ai.processing}</div>
                       <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 sm:p-3 text-xs sm:text-sm text-foreground prose prose-invert max-w-none">
                         <ReactMarkdown>{streamingText}</ReactMarkdown>
                       </div>
@@ -360,21 +310,16 @@ export default function AiAssistant() {
               </div>
             </div>
 
-            {/* Input Area */}
             <div className="border-t border-border bg-background/50 p-3 sm:p-4">
               {isOffline && (
                 <div className="mb-2 flex items-center gap-2 rounded-sm border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-mono text-destructive">
                   <WifiOff className="h-3 w-3 shrink-0" />
-                  <span>AI_CORE_OFFLINE — يتطلب اتصالاً بالإنترنت</span>
+                  <span dir="auto">{t.ai.offline_warning}</span>
                 </div>
               )}
               {selectedImage && (
                 <div className="mb-2 inline-flex relative rounded-md border border-border bg-card p-1">
-                  <img
-                    src={selectedImage}
-                    alt="Preview"
-                    className="h-16 sm:h-20 w-auto rounded-sm object-contain"
-                  />
+                  <img src={selectedImage} alt="Preview" className="h-16 sm:h-20 w-auto rounded-sm object-contain" />
                   <Button
                     variant="ghost"
                     size="icon"
@@ -385,15 +330,8 @@ export default function AiAssistant() {
                   </Button>
                 </div>
               )}
-
               <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handleImageSelect}
-                />
+                <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageSelect} />
                 <Button
                   type="button"
                   variant="outline"
@@ -404,34 +342,33 @@ export default function AiAssistant() {
                 >
                   <ImageIcon className="h-4 w-4" />
                 </Button>
-
                 <Input
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Enter diagnostic query..."
-                  className="flex-1 h-9 text-xs sm:text-sm font-mono placeholder:text-muted-foreground/50 border-border bg-card focus-visible:ring-primary/50"
+                  placeholder={t.ai.placeholder}
+                  className="flex-1 h-9 text-xs sm:text-sm font-sans placeholder:text-muted-foreground/50 border-border bg-card focus-visible:ring-primary/50"
                   disabled={isStreaming || isOffline}
+                  dir="auto"
                 />
-
                 <Button
                   type="submit"
                   disabled={isStreaming || (!inputText.trim() && !selectedImage) || isOffline}
                   className="h-9 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 px-3 sm:px-4"
                 >
-                  <Send className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline font-mono font-bold tracking-tight text-xs">EXECUTE</span>
+                  <Send className="h-4 w-4 sm:me-2" />
+                  <span className="hidden sm:inline font-mono font-bold tracking-tight text-xs">{t.ai.execute}</span>
                 </Button>
               </form>
             </div>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center text-center text-muted-foreground p-6">
+          <div className="flex flex-1 flex-col items-center justify-center text-center text-muted-foreground p-6" dir="auto">
             <Bot className="mb-4 h-10 w-10 sm:h-12 sm:w-12 text-primary/20" />
             <p className="font-mono text-xs sm:text-sm tracking-widest text-primary/50 uppercase">
-              No Session Selected
+              {t.ai.no_session_title}
             </p>
             <p className="mt-2 text-xs sm:text-sm max-w-xs text-muted-foreground/70">
-              Select an existing session or create a new one.
+              {t.ai.no_session_desc}
             </p>
             <Button
               variant="outline"
@@ -439,7 +376,7 @@ export default function AiAssistant() {
               className="mt-4 sm:hidden border-primary/20 text-primary hover:bg-primary/10"
               onClick={() => setShowSidebar(true)}
             >
-              View Sessions
+              {t.ai.view_sessions}
             </Button>
           </div>
         )}

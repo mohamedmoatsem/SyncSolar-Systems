@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { 
-  Activity, 
-  Cpu, 
-  AlertTriangle, 
+import {
+  Activity,
+  Cpu,
+  AlertTriangle,
   Database,
   LayoutDashboard,
   Zap,
@@ -10,24 +10,17 @@ import {
   Bot,
   WifiOff,
   Menu,
-  X
+  X,
+  Languages,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOffline } from "@/hooks/useOffline";
+import { useLanguage } from "@/contexts/language-context";
 import { useEffect, useState } from "react";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
-
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/monitoring", label: "Monitoring", icon: Activity },
-  { href: "/devices", label: "Devices", icon: Cpu },
-  { href: "/alerts", label: "Alerts", icon: AlertTriangle },
-  { href: "/logs", label: "Logs", icon: Database },
-  { href: "/ai-assistant", label: "AI Assistant", icon: Bot },
-];
 
 function LiveClock() {
   const [now, setNow] = useState(new Date());
@@ -36,7 +29,7 @@ function LiveClock() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span>
+    <span className="font-mono" dir="ltr">
       {now.toISOString().split("T")[0]}{" "}
       {now.toISOString().split("T")[1].substring(0, 8)}
     </span>
@@ -46,10 +39,19 @@ function LiveClock() {
 function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [location] = useLocation();
   const isOffline = useOffline();
+  const { t, lang } = useLanguage();
+
+  const navItems = [
+    { href: "/", label: t.nav.dashboard, icon: LayoutDashboard },
+    { href: "/monitoring", label: t.nav.monitoring, icon: Activity },
+    { href: "/devices", label: t.nav.devices, icon: Cpu },
+    { href: "/alerts", label: t.nav.alerts, icon: AlertTriangle },
+    { href: "/logs", label: t.nav.logs, icon: Database },
+    { href: "/ai-assistant", label: t.nav.ai_assistant, icon: Bot },
+  ];
 
   return (
     <>
-      {/* Mobile overlay */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-black/60 lg:hidden"
@@ -57,18 +59,24 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         />
       )}
 
-      {/* Sidebar panel */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 flex-shrink-0 border-r border-sidebar-border bg-sidebar flex flex-col transition-transform duration-300 ease-in-out",
+          "fixed inset-y-0 z-40 w-64 flex-shrink-0 border-sidebar-border bg-sidebar flex flex-col transition-transform duration-300 ease-in-out",
           "lg:static lg:translate-x-0 lg:z-auto",
-          open ? "translate-x-0" : "-translate-x-full"
+          lang === "ar"
+            ? "right-0 border-l lg:border-l lg:border-r-0"
+            : "left-0 border-r",
+          open
+            ? "translate-x-0"
+            : lang === "ar"
+            ? "translate-x-full"
+            : "-translate-x-full"
         )}
       >
-        <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border">
+        <div className="h-16 flex items-center justify-between px-5 border-b border-sidebar-border">
           <div className="flex items-center gap-2 text-primary font-bold tracking-wider">
-            <Zap className="h-5 w-5" />
-            <span>SOLAR_SCADA</span>
+            <Zap className="h-5 w-5 shrink-0" />
+            <span className="font-mono text-sm">SOLAR_SCADA</span>
           </div>
           <button
             onClick={onClose}
@@ -102,7 +110,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
                 />
                 {item.label}
                 {item.href === "/ai-assistant" && isOffline && (
-                  <span className="ml-auto text-xs text-destructive font-mono">
+                  <span className="ms-auto text-xs text-destructive font-mono">
                     OFFLINE
                   </span>
                 )}
@@ -115,13 +123,13 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
             {isOffline ? (
               <>
-                <WifiOff className="h-4 w-4 text-destructive" />
-                <span className="text-destructive">OFFLINE_MODE</span>
+                <WifiOff className="h-4 w-4 text-destructive shrink-0" />
+                <span className="text-destructive">{t.sys.offline_mode}</span>
               </>
             ) : (
               <>
-                <TerminalSquare className="h-4 w-4" />
-                <span>SYS_ONLINE_OK</span>
+                <TerminalSquare className="h-4 w-4 shrink-0" />
+                <span>{t.sys.online}</span>
               </>
             )}
           </div>
@@ -134,11 +142,21 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const isOffline = useOffline();
+  const { t, lang, setLang } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     setSidebarOpen(false);
   }, [location]);
+
+  const navItems = [
+    { href: "/", label: t.nav.dashboard },
+    { href: "/monitoring", label: t.nav.monitoring },
+    { href: "/devices", label: t.nav.devices },
+    { href: "/alerts", label: t.nav.alerts },
+    { href: "/logs", label: t.nav.logs },
+    { href: "/ai-assistant", label: t.nav.ai_assistant },
+  ];
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground">
@@ -153,26 +171,34 @@ export function Layout({ children }: LayoutProps) {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-sm sm:text-lg font-semibold tracking-tight uppercase">
-              {navItems.find((i) => i.href === location)?.label || "Dashboard"}
+            <h1 className="text-sm sm:text-base font-semibold tracking-tight uppercase">
+              {navItems.find((i) => i.href === location)?.label || t.nav.dashboard}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isOffline ? (
               <div className="flex items-center gap-1.5 text-xs sm:text-sm font-mono text-destructive">
                 <WifiOff className="h-4 w-4" />
-                <span className="hidden sm:inline">CACHED DATA</span>
+                <span className="hidden sm:inline">{t.sys.cached_data}</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-xs sm:text-sm font-mono">
                 <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                <span className="text-secondary">LIVE</span>
+                <span className="text-secondary">{t.sys.live}</span>
               </div>
             )}
-            <div className="hidden sm:block text-xs text-muted-foreground font-mono">
+            <div className="hidden sm:block text-xs text-muted-foreground">
               <LiveClock />
             </div>
+            <button
+              onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-sm border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors"
+              title={t.lang.switch}
+            >
+              <Languages className="h-3.5 w-3.5 shrink-0" />
+              <span>{t.lang.switch}</span>
+            </button>
           </div>
         </header>
 
