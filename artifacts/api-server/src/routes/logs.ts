@@ -1,20 +1,25 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { sensorReadingsTable } from "@workspace/db";
-import { desc } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { sql } from "drizzle-orm";
+import { requireAuth, getSystemId } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/logs", async (req, res) => {
+router.get("/logs", requireAuth, async (req, res) => {
   try {
+    const systemId = getSystemId(req);
     const limit = parseInt(req.query.limit as string) || 50;
     const page = parseInt(req.query.page as string) || 1;
     const offset = (page - 1) * limit;
 
+    const sysFilter = eq(sensorReadingsTable.solarSystemId, systemId);
+
     const [countResult] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(sensorReadingsTable);
+      .from(sensorReadingsTable)
+      .where(sysFilter);
 
     const total = countResult.count;
     const totalPages = Math.ceil(total / limit);
@@ -22,6 +27,7 @@ router.get("/logs", async (req, res) => {
     const rows = await db
       .select()
       .from(sensorReadingsTable)
+      .where(sysFilter)
       .orderBy(desc(sensorReadingsTable.timestamp))
       .limit(limit)
       .offset(offset);

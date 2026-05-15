@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { dehydrate, hydrate } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -10,6 +10,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { setApiAuth } from "@/hooks/useApi";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -38,6 +40,32 @@ async function restoreCache() {
     if (Date.now() - savedAt > CACHE_MAX_AGE) return;
     hydrate(queryClient, data);
   } catch {}
+}
+
+function AuthGate() {
+  const { user, token, selectedSystemId, isLoading } = useAuth();
+  const segments = useSegments();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    setApiAuth(token, selectedSystemId);
+    if (token) {
+      qc.invalidateQueries();
+    }
+  }, [token, selectedSystemId]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const inAuth = segments[0] === "(auth)";
+    if (!user && !inAuth) {
+      qc.clear();
+      router.replace("/(auth)/login");
+    } else if (user && inAuth) {
+      router.replace("/(tabs)");
+    }
+  }, [user, isLoading, segments]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -72,14 +100,18 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <LanguageProvider>
-            <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#090e1a" }}>
-              <KeyboardProvider>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="+not-found" />
-                </Stack>
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <AuthProvider>
+              <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#090e1a" }}>
+                <KeyboardProvider>
+                  <AuthGate />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </AuthProvider>
           </LanguageProvider>
         </QueryClientProvider>
       </ErrorBoundary>

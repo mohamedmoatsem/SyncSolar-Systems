@@ -6,6 +6,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { UserHeader } from "@/components/UserHeader";
 
 export default function TabLayout() {
   const colors = useColors();
@@ -14,6 +15,7 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
+      <UserHeader />
       <OfflineBanner />
       <Tabs
         screenOptions={{

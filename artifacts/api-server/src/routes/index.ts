@@ -6,9 +6,13 @@ import devicesRouter from "./devices";
 import logsRouter from "./logs";
 import dashboardRouter from "./dashboard";
 import geminiRouter from "./gemini/index";
+import authRouter from "./auth";
+import solarSystemsRouter from "./solar-systems";
 
 const router: IRouter = Router();
 
+router.use(authRouter);
+router.use(solarSystemsRouter);
 router.use(healthRouter);
 router.use(readingsRouter);
 router.use(alertsRouter);

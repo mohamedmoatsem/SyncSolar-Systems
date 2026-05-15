@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { conversations as conversationsTable, messages as messagesTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { ai } from "@workspace/integrations-gemini-ai";
+import { requireAuth } from "../../middleware/auth";
 
 const router = Router();
 
@@ -28,7 +29,7 @@ You can analyze images of solar panels, inverters, wiring diagrams, SCADA screen
 Always be precise with units (V, A, W, kWh, °C, W/m², %) and reference standard thresholds and limits.`;
 
 // List all conversations
-router.get("/gemini/conversations", async (req, res) => {
+router.get("/gemini/conversations", requireAuth, async (req, res) => {
   try {
     const conversations = await db
       .select()
@@ -48,7 +49,7 @@ router.get("/gemini/conversations", async (req, res) => {
 });
 
 // Create conversation
-router.post("/gemini/conversations", async (req, res) => {
+router.post("/gemini/conversations", requireAuth, async (req, res) => {
   try {
     const { title } = req.body;
     const [conv] = await db
@@ -67,7 +68,7 @@ router.post("/gemini/conversations", async (req, res) => {
 });
 
 // Get conversation with messages
-router.get("/gemini/conversations/:id", async (req, res) => {
+router.get("/gemini/conversations/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [conv] = await db
@@ -101,7 +102,7 @@ router.get("/gemini/conversations/:id", async (req, res) => {
 });
 
 // Delete conversation
-router.delete("/gemini/conversations/:id", async (req, res) => {
+router.delete("/gemini/conversations/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await db.delete(messagesTable).where(eq(messagesTable.conversationId, id));
@@ -118,7 +119,7 @@ router.delete("/gemini/conversations/:id", async (req, res) => {
 });
 
 // List messages
-router.get("/gemini/conversations/:id/messages", async (req, res) => {
+router.get("/gemini/conversations/:id/messages", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const msgs = await db
@@ -142,7 +143,7 @@ router.get("/gemini/conversations/:id/messages", async (req, res) => {
 });
 
 // Send message — SSE streaming with multimodal support
-router.post("/gemini/conversations/:id/messages", async (req, res) => {
+router.post("/gemini/conversations/:id/messages", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { content } = req.body;
@@ -169,12 +170,9 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
         const mimeType = meta.replace("data:", "").replace(";base64", "");
         return {
           role: m.role === "assistant" ? "model" : "user",
-          parts: [
-            { inlineData: { mimeType, data: b64 } },
-          ],
+          parts: [{ inlineData: { mimeType, data: b64 } }],
         };
       }
-      // Check if content has both text and image (JSON-encoded)
       try {
         const parsed = JSON.parse(m.content);
         if (parsed.text || parsed.imageData) {
@@ -185,10 +183,7 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
             const mimeType = meta.replace("data:", "").replace(";base64", "");
             parts.push({ inlineData: { mimeType, data: b64 } });
           }
-          return {
-            role: m.role === "assistant" ? "model" : "user",
-            parts,
-          };
+          return { role: m.role === "assistant" ? "model" : "user", parts };
         }
       } catch {
         // not JSON, treat as plain text

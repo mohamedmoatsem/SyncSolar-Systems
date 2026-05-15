@@ -1,15 +1,20 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { sensorReadingsTable, alertsTable, devicesTable } from "@workspace/db";
-import { desc, gte, eq, sql } from "drizzle-orm";
+import { desc, gte, eq, sql, and } from "drizzle-orm";
+import { requireAuth, getSystemId } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/dashboard/summary", async (req, res) => {
+router.get("/dashboard/summary", requireAuth, async (req, res) => {
   try {
+    const systemId = getSystemId(req);
+    const sysFilter = eq(sensorReadingsTable.solarSystemId, systemId);
+
     const latestReadings = await db
       .select()
       .from(sensorReadingsTable)
+      .where(sysFilter)
       .orderBy(desc(sensorReadingsTable.timestamp))
       .limit(1);
 
@@ -21,22 +26,27 @@ router.get("/dashboard/summary", async (req, res) => {
     const todayReadings = await db
       .select({ power: sensorReadingsTable.power })
       .from(sensorReadingsTable)
-      .where(gte(sensorReadingsTable.timestamp, todayStart));
+      .where(and(sysFilter, gte(sensorReadingsTable.timestamp, todayStart)));
 
     const energyToday = todayReadings.reduce((sum, r) => sum + (r.power / 1000) * (5 / 60), 0);
 
     const allReadings = await db
       .select({ power: sensorReadingsTable.power })
-      .from(sensorReadingsTable);
+      .from(sensorReadingsTable)
+      .where(sysFilter);
 
     const energyTotal = allReadings.reduce((sum, r) => sum + (r.power / 1000) * (5 / 60), 0);
 
     const [activeAlertCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(alertsTable)
-      .where(eq(alertsTable.status, "active"));
+      .where(and(eq(alertsTable.solarSystemId, systemId), eq(alertsTable.status, "active")));
 
-    const devices = await db.select().from(devicesTable);
+    const devices = await db
+      .select()
+      .from(devicesTable)
+      .where(eq(devicesTable.solarSystemId, systemId));
+
     const devicesOnline = devices.filter((d) => d.isEnabled && d.status !== "fault").length;
 
     res.json({
@@ -56,63 +66,62 @@ router.get("/dashboard/summary", async (req, res) => {
   }
 });
 
-router.get("/dashboard/energy-today", async (req, res) => {
+router.get("/dashboard/energy-today", requireAuth, async (req, res) => {
   try {
+    const systemId = getSystemId(req);
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
     const readings = await db
       .select()
       .from(sensorReadingsTable)
-      .where(gte(sensorReadingsTable.timestamp, todayStart))
+      .where(and(
+        eq(sensorReadingsTable.solarSystemId, systemId),
+        gte(sensorReadingsTable.timestamp, todayStart)
+      ))
       .orderBy(sensorReadingsTable.timestamp);
 
     const hourMap: Record<string, { production: number[]; consumption: number[] }> = {};
-
     for (let h = 0; h < 24; h++) {
-      const label = `${h.toString().padStart(2, "0")}:00`;
-      hourMap[label] = { production: [], consumption: [] };
+      hourMap[`${h.toString().padStart(2, "0")}:00`] = { production: [], consumption: [] };
     }
 
     for (const r of readings) {
-      const h = new Date(r.timestamp).getHours();
-      const label = `${h.toString().padStart(2, "0")}:00`;
+      const label = `${new Date(r.timestamp).getHours().toString().padStart(2, "0")}:00`;
       hourMap[label].production.push(r.power);
       hourMap[label].consumption.push(r.loadPower);
     }
 
-    const result = Object.entries(hourMap).map(([hour, data]) => ({
-      hour,
-      production:
-        data.production.length > 0
-          ? Math.round(data.production.reduce((a, b) => a + b, 0) / data.production.length)
-          : 0,
-      consumption:
-        data.consumption.length > 0
-          ? Math.round(data.consumption.reduce((a, b) => a + b, 0) / data.consumption.length)
-          : 0,
-    }));
-
-    res.json(result);
+    res.json(
+      Object.entries(hourMap).map(([hour, data]) => ({
+        hour,
+        production: data.production.length > 0
+          ? Math.round(data.production.reduce((a, b) => a + b, 0) / data.production.length) : 0,
+        consumption: data.consumption.length > 0
+          ? Math.round(data.consumption.reduce((a, b) => a + b, 0) / data.consumption.length) : 0,
+      }))
+    );
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/dashboard/alerts-summary", async (req, res) => {
+router.get("/dashboard/alerts-summary", requireAuth, async (req, res) => {
   try {
-    const alerts = await db.select().from(alertsTable);
+    const systemId = getSystemId(req);
+    const alerts = await db
+      .select()
+      .from(alertsTable)
+      .where(eq(alertsTable.solarSystemId, systemId));
 
-    const summary = {
+    res.json({
       total: alerts.length,
       critical: alerts.filter((a) => a.severity === "critical").length,
       warning: alerts.filter((a) => a.severity === "warning").length,
       info: alerts.filter((a) => a.severity === "info").length,
       active: alerts.filter((a) => a.status === "active").length,
       resolved: alerts.filter((a) => a.status === "resolved").length,
-    };
-
-    res.json(summary);
+    });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }

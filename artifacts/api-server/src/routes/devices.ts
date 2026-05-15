@@ -1,13 +1,19 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { devicesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { requireAuth, getSystemId } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/devices", async (req, res) => {
+router.get("/devices", requireAuth, async (req, res) => {
   try {
-    const devices = await db.select().from(devicesTable);
+    const systemId = getSystemId(req);
+    const devices = await db
+      .select()
+      .from(devicesTable)
+      .where(eq(devicesTable.solarSystemId, systemId));
+
     res.json(
       devices.map((d) => ({
         id: d.id,
@@ -24,18 +30,16 @@ router.get("/devices", async (req, res) => {
   }
 });
 
-router.patch("/devices/:id/toggle", async (req, res) => {
+router.patch("/devices/:id/toggle", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const systemId = getSystemId(req);
     const { isEnabled } = req.body;
 
     const [updated] = await db
       .update(devicesTable)
-      .set({
-        isEnabled,
-        status: isEnabled ? "on" : "off",
-      })
-      .where(eq(devicesTable.id, id))
+      .set({ isEnabled, status: isEnabled ? "on" : "off" })
+      .where(and(eq(devicesTable.id, id), eq(devicesTable.solarSystemId, systemId)))
       .returning();
 
     if (!updated) {

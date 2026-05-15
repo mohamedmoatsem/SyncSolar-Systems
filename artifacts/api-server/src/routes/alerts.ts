@@ -2,32 +2,25 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { alertsTable } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
+import { requireAuth, getSystemId } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/alerts", async (req, res) => {
+router.get("/alerts", requireAuth, async (req, res) => {
   try {
-    const status = req.query.status as string || "all";
+    const systemId = getSystemId(req);
+    const status = (req.query.status as string) || "all";
 
-    let rows;
-    if (status === "active") {
-      rows = await db
-        .select()
-        .from(alertsTable)
-        .where(eq(alertsTable.status, "active"))
-        .orderBy(desc(alertsTable.timestamp));
-    } else if (status === "resolved") {
-      rows = await db
-        .select()
-        .from(alertsTable)
-        .where(eq(alertsTable.status, "resolved"))
-        .orderBy(desc(alertsTable.timestamp));
-    } else {
-      rows = await db
-        .select()
-        .from(alertsTable)
-        .orderBy(desc(alertsTable.timestamp));
-    }
+    const sysFilter = eq(alertsTable.solarSystemId, systemId);
+    const rows = await db
+      .select()
+      .from(alertsTable)
+      .where(
+        status === "active" ? and(sysFilter, eq(alertsTable.status, "active")) :
+        status === "resolved" ? and(sysFilter, eq(alertsTable.status, "resolved")) :
+        sysFilter
+      )
+      .orderBy(desc(alertsTable.timestamp));
 
     res.json(
       rows.map((a) => ({
@@ -45,14 +38,15 @@ router.get("/alerts", async (req, res) => {
   }
 });
 
-router.patch("/alerts/:id/resolve", async (req, res) => {
+router.patch("/alerts/:id/resolve", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const systemId = getSystemId(req);
 
     const [updated] = await db
       .update(alertsTable)
       .set({ status: "resolved", resolvedAt: new Date() })
-      .where(eq(alertsTable.id, id))
+      .where(and(eq(alertsTable.id, id), eq(alertsTable.solarSystemId, systemId)))
       .returning();
 
     if (!updated) {

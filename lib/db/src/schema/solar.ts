@@ -1,9 +1,11 @@
 import { pgTable, serial, real, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { solarSystemsTable } from "./auth";
 
 export const sensorReadingsTable = pgTable("sensor_readings", {
   id: serial("id").primaryKey(),
+  solarSystemId: integer("solar_system_id").references(() => solarSystemsTable.id),
   voltage: real("voltage").notNull(),
   current: real("current").notNull(),
   power: real("power").notNull(),
@@ -22,6 +24,7 @@ export type SensorReading = typeof sensorReadingsTable.$inferSelect;
 
 export const alertsTable = pgTable("alerts", {
   id: serial("id").primaryKey(),
+  solarSystemId: integer("solar_system_id").references(() => solarSystemsTable.id),
   type: text("type").notNull(),
   severity: text("severity").notNull(),
   message: text("message").notNull(),
@@ -36,6 +39,7 @@ export type Alert = typeof alertsTable.$inferSelect;
 
 export const devicesTable = pgTable("devices", {
   id: serial("id").primaryKey(),
+  solarSystemId: integer("solar_system_id").references(() => solarSystemsTable.id),
   name: text("name").notNull(),
   type: text("type").notNull(),
   status: text("status").notNull().default("on"),
