@@ -20,6 +20,7 @@ import { CachedBadge } from "@/components/CachedBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { apiFetch } from "@/hooks/useApi";
+import { DeviceConsumptionChart } from "@/components/DeviceConsumptionChart";
 
 interface Device {
   id: number;
@@ -112,7 +113,7 @@ function DeviceItem({ device, isOnline }: { device: Device; isOnline: boolean })
 
 export default function DevicesScreen() {
   const colors = useColors();
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const insets = useSafeAreaInsets();
   const isOnline = useNetworkStatus();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -156,7 +157,7 @@ export default function DevicesScreen() {
             <View style={[styles.offlineNote, { backgroundColor: colors.warning + "18", borderColor: colors.warning + "44" }]}>
               <Feather name="lock" size={12} color={colors.warning} />
               <Text style={[styles.offlineNoteText, { color: colors.warning }]}>
-                {t.lang === "ar"
+                {isRTL
                   ? "التحكم بالأجهزة متوقف في وضع بدون إنترنت"
                   : "Device control disabled while offline"}
               </Text>
@@ -181,6 +182,8 @@ export default function DevicesScreen() {
               </View>
             </View>
           )}
+
+          <DeviceConsumptionChart />
         </>
       }
       ListEmptyComponent={

@@ -72,6 +72,14 @@ const AR = {
   occuredAt: "وقت الحدوث",
   cachedData: "بيانات محفوظة",
   offlineMode: "وضع بدون إنترنت",
+  deviceConsumption: "استهلاك الأجهزة",
+  liveConsumption: "استهلاك فوري",
+  currentWatts: "واط حالي",
+  totalKwhLabel: "إجمالي (kWh)",
+  noConsumptionData: "لا توجد بيانات استهلاك بعد",
+  iotEndpointHint: "أرسل بيانات المستشعر إلى: POST /api/device-consumption",
+  shareOfTotal: "حصة من الإجمالي",
+  totalSystemLoad: "الحمل الكلي",
 };
 
 const EN: typeof AR = {
@@ -143,6 +151,14 @@ const EN: typeof AR = {
   occuredAt: "Occurred At",
   cachedData: "Cached Data",
   offlineMode: "Offline Mode",
+  deviceConsumption: "Device Consumption",
+  liveConsumption: "Live Consumption",
+  currentWatts: "Current (W)",
+  totalKwhLabel: "Total (kWh)",
+  noConsumptionData: "No consumption data yet",
+  iotEndpointHint: "Send sensor data to: POST /api/device-consumption",
+  shareOfTotal: "Share of total",
+  totalSystemLoad: "Total System Load",
 };
 
 interface LangCtx {
