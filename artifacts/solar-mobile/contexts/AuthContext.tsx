@@ -17,6 +17,7 @@ interface AuthCtx {
   selectedSystemId: number | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setSelectedSystem: (id: number) => void;
 }
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthCtx>({
   selectedSystemId: null,
   isLoading: true,
   login: async () => {},
+  register: async () => {},
   logout: async () => {},
   setSelectedSystem: () => {},
 });
@@ -72,6 +74,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  const register = async (name: string, email: string, password: string) => {
+    const res = await fetch(`${BASE}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.error ?? "Registration failed";
+      throw new Error(
+        msg === "Email already registered"
+          ? "هذا البريد الإلكتروني مسجّل بالفعل"
+          : msg
+      );
+    }
+    const data = await res.json();
+    await AsyncStorage.setItem(TOKEN_KEY, data.token);
+    setToken(data.token);
+    setUser(data.user);
+    const sysId = data.user.solarSystemId ?? 1;
+    setSelectedSystemId(sysId);
+    await AsyncStorage.setItem(SYSTEM_KEY, String(sysId));
+  };
+
   const login = async (email: string, password: string) => {
     const res = await fetch(`${BASE}/api/auth/login`, {
       method: "POST",
@@ -105,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, selectedSystemId, isLoading, login, logout, setSelectedSystem }}
+      value={{ user, token, selectedSystemId, isLoading, login, register, logout, setSelectedSystem }}
     >
       {children}
     </AuthContext.Provider>
