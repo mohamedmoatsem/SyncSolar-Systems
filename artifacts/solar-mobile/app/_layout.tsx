@@ -13,7 +13,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const CACHE_KEY = "solar-scada-rq-cache";
+const CACHE_KEY = "syncsolarsystems-rq-cache";
 const CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
 
 const queryClient = new QueryClient({

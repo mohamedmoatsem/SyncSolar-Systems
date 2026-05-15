@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Solar SCADA",
+    "name": "SyncSolar Systems",
     "slug": "solar-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,11 +14,15 @@
       "backgroundColor": "#090e1a"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.syncsolarsystems.mobile"
     },
-    "android": {},
+    "android": {
+      "package": "com.syncsolarsystems.mobile"
+    },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "name": "SyncSolar Systems"
     },
     "plugins": [
       [

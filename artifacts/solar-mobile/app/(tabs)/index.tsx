@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -10,9 +11,9 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { CachedBadge } from "@/components/CachedBadge";
 import { EnergyChart } from "@/components/EnergyChart";
 import { LangToggle } from "@/components/LangToggle";
@@ -22,6 +23,8 @@ import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { apiFetch } from "@/hooks/useApi";
+
+const APP_ICON = require("@/assets/images/icon.png");
 
 interface Summary {
   currentPower: number;
@@ -92,11 +95,9 @@ export default function DashboardScreen() {
     >
       <View style={[styles.header, { paddingTop: topPad, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
-          <View style={[styles.logoWrap, { backgroundColor: colors.primary + "22" }]}>
-            <Feather name="sun" size={18} color={colors.primary} />
-          </View>
+          <Image source={APP_ICON} style={styles.logoImg} resizeMode="contain" />
           <View>
-            <Text style={[styles.headerTitle, { color: colors.foreground }]}>Solar SCADA</Text>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>SyncSolar Systems</Text>
             <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
               {isOnline ? t.liveData : t.offlineMode}
             </Text>
@@ -229,12 +230,10 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" },
-  logoWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+  logoImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
   },
   headerTitle: { fontSize: 18, fontWeight: "700", letterSpacing: -0.3 },
   headerSub: { fontSize: 10, fontWeight: "500", marginTop: 1 },
