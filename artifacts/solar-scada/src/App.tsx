@@ -2,7 +2,6 @@ import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
 
 import { LanguageProvider } from "@/contexts/language-context";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
@@ -32,98 +31,62 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ component: Component }: { component: () => React.ReactElement }) {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#090e1a" }}
-      >
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
-            style={{ borderColor: "#ff8c1a", borderTopColor: "transparent" }}
-          />
-          <p className="text-sm" style={{ color: "#758ab0" }}>
-            جارٍ التحميل...
-          </p>
-        </div>
+function LoadingScreen() {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ background: "#090e1a" }}
+    >
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="w-10 h-10 rounded-full border-2 animate-spin"
+          style={{ borderColor: "#ff8c1a", borderTopColor: "transparent" }}
+        />
+        <p className="text-sm" style={{ color: "#758ab0" }}>
+          جارٍ التحميل...
+        </p>
       </div>
-    );
-  }
-
-  if (!user) return <Redirect to="/login" />;
-  return <Component />;
+    </div>
+  );
 }
 
-function Router() {
+function AppRouter() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) {
+  if (isLoading) return <LoadingScreen />;
+
+  /* ── Not logged in ── */
+  if (!user) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#090e1a" }}
-      >
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
-            style={{ borderColor: "#ff8c1a", borderTopColor: "transparent" }}
-          />
-          <p className="text-sm" style={{ color: "#758ab0" }}>
-            جارٍ التحميل...
-          </p>
-        </div>
-      </div>
+      <Switch>
+        <Route path="/login" component={LoginPage} />
+        <Route path="/register" component={RegisterPage} />
+        <Route>
+          <Redirect to="/login" />
+        </Route>
+      </Switch>
     );
   }
 
+  /* ── Logged in ── */
   return (
-    <Switch>
-      {/* Public auth routes — redirect to dashboard if already logged in */}
-      <Route path="/login">
-        {user ? <Redirect to="/" /> : <LoginPage />}
-      </Route>
-      <Route path="/register">
-        {user ? <Redirect to="/" /> : <RegisterPage />}
-      </Route>
-
-      {/* Protected app routes */}
-      <Route path="/">
-        <ProtectedRoute component={() => (
-          <Layout><OfflineBanner /><Dashboard /></Layout>
-        )} />
-      </Route>
-      <Route path="/monitoring">
-        <ProtectedRoute component={() => (
-          <Layout><Monitoring /></Layout>
-        )} />
-      </Route>
-      <Route path="/devices">
-        <ProtectedRoute component={() => (
-          <Layout><Devices /></Layout>
-        )} />
-      </Route>
-      <Route path="/alerts">
-        <ProtectedRoute component={() => (
-          <Layout><Alerts /></Layout>
-        )} />
-      </Route>
-      <Route path="/logs">
-        <ProtectedRoute component={() => (
-          <Layout><Logs /></Layout>
-        )} />
-      </Route>
-      <Route path="/ai-assistant">
-        <ProtectedRoute component={() => (
-          <Layout><AiAssistant /></Layout>
-        )} />
-      </Route>
-
-      <Route component={NotFound} />
-    </Switch>
+    <Layout>
+      <OfflineBanner />
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/monitoring" component={Monitoring} />
+        <Route path="/devices" component={Devices} />
+        <Route path="/alerts" component={Alerts} />
+        <Route path="/logs" component={Logs} />
+        <Route path="/ai-assistant" component={AiAssistant} />
+        <Route path="/login">
+          <Redirect to="/" />
+        </Route>
+        <Route path="/register">
+          <Redirect to="/" />
+        </Route>
+      </Switch>
+    </Layout>
   );
 }
 
@@ -134,7 +97,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
+              <AppRouter />
             </WouterRouter>
             <Toaster />
           </TooltipProvider>

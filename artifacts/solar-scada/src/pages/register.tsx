@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth, type Role } from "@/contexts/auth-context";
 import { useLanguage } from "@/contexts/language-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sun, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Sun, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Wrench, User } from "lucide-react";
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<Role>("client");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,6 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
     if (!name.trim()) { setError("يرجى إدخال الاسم الكامل"); return; }
     if (!email.includes("@") || !email.includes(".")) { setError("البريد الإلكتروني غير صحيح"); return; }
     if (password.length < 6) { setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل"); return; }
@@ -40,7 +40,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await register(name.trim(), email.trim().toLowerCase(), password);
+      await register(name.trim(), email.trim().toLowerCase(), password, role);
       navigate("/");
     } catch (err: any) {
       setError(err.message ?? "حدث خطأ، يرجى المحاولة مرة أخرى");
@@ -88,6 +88,68 @@ export default function RegisterPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <Label className="text-right block text-sm" style={{ color: "#758ab0" }}>
+                نوع الحساب
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole("client")}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200"
+                  style={{
+                    borderColor: role === "client" ? "#ff8c1a" : "#202940",
+                    background: role === "client" ? "rgba(255,140,26,0.08)" : "#131b2e",
+                  }}
+                >
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center"
+                    style={{
+                      background: role === "client" ? "rgba(255,140,26,0.2)" : "rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <User className="w-5 h-5" style={{ color: role === "client" ? "#ff8c1a" : "#758ab0" }} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold" style={{ color: role === "client" ? "#ff8c1a" : "#eeeee8" }}>
+                      عميل
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "#758ab0" }}>
+                      مراقبة نظامي
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRole("technician")}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200"
+                  style={{
+                    borderColor: role === "technician" ? "#00c8d8" : "#202940",
+                    background: role === "technician" ? "rgba(0,200,216,0.08)" : "#131b2e",
+                  }}
+                >
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center"
+                    style={{
+                      background: role === "technician" ? "rgba(0,200,216,0.2)" : "rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <Wrench className="w-5 h-5" style={{ color: role === "technician" ? "#00c8d8" : "#758ab0" }} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold" style={{ color: role === "technician" ? "#00c8d8" : "#eeeee8" }}>
+                      فني
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "#758ab0" }}>
+                      إدارة جميع الأنظمة
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             {/* Name */}
             <div className="space-y-1.5">
               <Label className="text-right block text-sm" style={{ color: "#758ab0" }}>
@@ -134,6 +196,7 @@ export default function RegisterPage() {
                   placeholder="6 أحرف على الأقل"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
                   style={{
                     background: "#131b2e",
                     borderColor: "#202940",
@@ -150,16 +213,13 @@ export default function RegisterPage() {
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {/* Strength bar */}
               {password.length > 0 && (
                 <div className="flex items-center gap-2 mt-1.5">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
                       className="h-1 flex-1 rounded-full transition-colors duration-300"
-                      style={{
-                        background: passwordStrength >= i ? strengthColor : "#202940",
-                      }}
+                      style={{ background: passwordStrength >= i ? strengthColor : "#202940" }}
                     />
                   ))}
                   <span className="text-xs w-12 text-right" style={{ color: strengthColor }}>
@@ -180,6 +240,7 @@ export default function RegisterPage() {
                   placeholder="أعد إدخال كلمة المرور"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                   style={{
                     background: "#131b2e",
                     borderColor:
@@ -221,7 +282,11 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full font-bold text-base py-5 mt-2"
               style={{
-                background: loading ? "#7a4410" : "linear-gradient(135deg, #ff8c1a, #ff6b00)",
+                background: loading
+                  ? "#7a4410"
+                  : role === "technician"
+                    ? "linear-gradient(135deg, #00c8d8, #0099a8)"
+                    : "linear-gradient(135deg, #ff8c1a, #ff6b00)",
                 color: "#090e1a",
                 border: "none",
               }}
@@ -232,7 +297,7 @@ export default function RegisterPage() {
                   جارٍ إنشاء الحساب...
                 </span>
               ) : (
-                "إنشاء الحساب"
+                `إنشاء حساب ${role === "technician" ? "فني" : "عميل"}`
               )}
             </Button>
           </form>

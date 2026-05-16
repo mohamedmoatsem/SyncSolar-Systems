@@ -17,7 +17,7 @@ interface AuthCtx {
   selectedSystemId: number | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role?: Role) => Promise<void>;
   logout: () => Promise<void>;
   setSelectedSystem: (id: number) => void;
 }
@@ -74,11 +74,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, role: Role = "client") => {
     const res = await fetch(`${BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, role }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

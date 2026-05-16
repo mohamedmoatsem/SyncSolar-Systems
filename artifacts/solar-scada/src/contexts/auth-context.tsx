@@ -16,7 +16,7 @@ interface AuthCtx {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role?: Role) => Promise<void>;
   logout: () => void;
 }
 
@@ -31,6 +31,10 @@ const AuthContext = createContext<AuthCtx>({
 
 const TOKEN_KEY = "syncsolar-jwt";
 
+function applyToken(t: string | null) {
+  setAuthTokenGetter(t ? () => t : null);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -39,6 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY);
     if (stored) {
+      // Apply token BEFORE making any API call so queries can use it immediately
+      applyToken(stored);
       fetch("/api/auth/me", { headers: { Authorization: `Bearer ${stored}` } })
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
@@ -46,19 +52,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setToken(stored);
             setUser(data.user);
           } else {
+            applyToken(null);
             localStorage.removeItem(TOKEN_KEY);
           }
         })
-        .catch(() => localStorage.removeItem(TOKEN_KEY))
+        .catch(() => {
+          applyToken(null);
+          localStorage.removeItem(TOKEN_KEY);
+        })
         .finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    setAuthTokenGetter(token ? () => token : null);
-  }, [token]);
 
   const login = async (email: string, password: string) => {
     const res = await fetch("/api/auth/login", {
@@ -75,16 +81,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
     const data = await res.json();
+    applyToken(data.token);
     localStorage.setItem(TOKEN_KEY, data.token);
     setToken(data.token);
     setUser(data.user);
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    role: Role = "client"
+  ) => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, role }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -95,12 +107,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
     const data = await res.json();
+    applyToken(data.token);
     localStorage.setItem(TOKEN_KEY, data.token);
     setToken(data.token);
     setUser(data.user);
   };
 
   const logout = () => {
+    applyToken(null);
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);

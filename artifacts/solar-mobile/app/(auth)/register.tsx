@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, type Role } from "@/contexts/AuthContext";
 
 const C = {
   bg: "#090e1a",
@@ -31,6 +31,7 @@ const C = {
 
 export default function RegisterScreen() {
   const { register } = useAuth();
+  const [role, setRole] = useState<Role>("client");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,33 +40,25 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
+  const passwordStrength =
+    password.length === 0 ? 0
+    : password.length < 6 ? 1
+    : password.length < 10 ? 2
+    : 3;
+  const strengthColor = ["", C.error, C.primary, C.success][passwordStrength];
+  const strengthLabel = ["", "ضعيفة", "مقبولة", "قوية"][passwordStrength];
+
   const handleRegister = async () => {
     setError("");
-
-    if (!name.trim()) {
-      setError("يرجى إدخال الاسم الكامل");
-      return;
-    }
-    if (!email.trim()) {
-      setError("يرجى إدخال البريد الإلكتروني");
-      return;
-    }
-    if (!email.includes("@") || !email.includes(".")) {
-      setError("البريد الإلكتروني غير صحيح");
-      return;
-    }
-    if (password.length < 6) {
-      setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("كلمة المرور وتأكيدها غير متطابقتين");
-      return;
-    }
+    if (!name.trim()) { setError("يرجى إدخال الاسم الكامل"); return; }
+    if (!email.trim()) { setError("يرجى إدخال البريد الإلكتروني"); return; }
+    if (!email.includes("@") || !email.includes(".")) { setError("البريد الإلكتروني غير صحيح"); return; }
+    if (password.length < 6) { setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل"); return; }
+    if (password !== confirmPassword) { setError("كلمة المرور وتأكيدها غير متطابقتين"); return; }
 
     setLoading(true);
     try {
-      await register(name.trim(), email.trim().toLowerCase(), password);
+      await register(name.trim(), email.trim().toLowerCase(), password, role);
       router.replace("/(tabs)");
     } catch (e: any) {
       setError(e.message ?? "حدث خطأ، يرجى المحاولة مرة أخرى");
@@ -98,6 +91,34 @@ export default function RegisterScreen() {
           <View style={s.card}>
             <Text style={s.title}>إنشاء حساب جديد</Text>
             <Text style={s.subtitle}>أدخل بياناتك لإنشاء حساب في المنصة</Text>
+
+            {/* Role Selection */}
+            <Text style={s.label}>نوع الحساب</Text>
+            <View style={s.roleRow}>
+              <Pressable
+                style={[
+                  s.roleBtn,
+                  role === "client" && { borderColor: C.primary, backgroundColor: "rgba(255,140,26,0.08)" },
+                ]}
+                onPress={() => setRole("client")}
+              >
+                <Text style={s.roleIcon}>👤</Text>
+                <Text style={[s.roleTitle, role === "client" && { color: C.primary }]}>عميل</Text>
+                <Text style={s.roleDesc}>مراقبة نظامي</Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  s.roleBtn,
+                  role === "technician" && { borderColor: C.secondary, backgroundColor: "rgba(0,200,216,0.08)" },
+                ]}
+                onPress={() => setRole("technician")}
+              >
+                <Text style={s.roleIcon}>🔧</Text>
+                <Text style={[s.roleTitle, role === "technician" && { color: C.secondary }]}>فني</Text>
+                <Text style={s.roleDesc}>إدارة الأنظمة</Text>
+              </Pressable>
+            </View>
 
             {/* Name */}
             <View style={s.fieldWrap}>
@@ -146,13 +167,29 @@ export default function RegisterScreen() {
                   <Text style={s.eyeText}>{showPass ? "إخفاء" : "إظهار"}</Text>
                 </Pressable>
               </View>
+              {password.length > 0 && (
+                <View style={[s.strengthRow, { marginTop: 6 }]}>
+                  {[1, 2, 3].map((i) => (
+                    <View
+                      key={i}
+                      style={[s.strengthBar, { backgroundColor: passwordStrength >= i ? strengthColor : C.border }]}
+                    />
+                  ))}
+                  <Text style={[s.strengthText, { color: strengthColor }]}>{strengthLabel}</Text>
+                </View>
+              )}
             </View>
 
             {/* Confirm Password */}
             <View style={s.fieldWrap}>
               <Text style={s.label}>تأكيد كلمة المرور</Text>
               <TextInput
-                style={s.input}
+                style={[
+                  s.input,
+                  confirmPassword.length > 0 && {
+                    borderColor: confirmPassword === password ? C.success : C.error,
+                  },
+                ]}
                 placeholder="أعد إدخال كلمة المرور"
                 placeholderTextColor={C.mutedFg}
                 value={confirmPassword}
@@ -163,31 +200,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Password strength hint */}
-            {password.length > 0 && (
-              <View style={[s.strengthRow, { marginBottom: 8 }]}>
-                {[1, 2, 3, 4].map((i) => (
-                  <View
-                    key={i}
-                    style={[
-                      s.strengthBar,
-                      {
-                        backgroundColor:
-                          password.length >= i * 3
-                            ? password.length >= 10 ? C.success
-                            : password.length >= 6 ? C.primary
-                            : C.error
-                            : C.border,
-                      },
-                    ]}
-                  />
-                ))}
-                <Text style={[s.strengthText, { color: C.mutedFg }]}>
-                  {password.length < 6 ? "ضعيفة" : password.length < 10 ? "مقبولة" : "قوية"}
-                </Text>
-              </View>
-            )}
-
             {!!error && (
               <View style={s.errorBox}>
                 <Text style={s.errorText}>{error}</Text>
@@ -195,14 +207,20 @@ export default function RegisterScreen() {
             )}
 
             <Pressable
-              style={[s.btn, loading && s.btnDisabled]}
+              style={[
+                s.btn,
+                loading && s.btnDisabled,
+                role === "technician" && { backgroundColor: C.secondary },
+              ]}
               onPress={handleRegister}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color={C.bg} size="small" />
               ) : (
-                <Text style={s.btnText}>إنشاء الحساب</Text>
+                <Text style={s.btnText}>
+                  إنشاء حساب {role === "technician" ? "فني" : "عميل"}
+                </Text>
               )}
             </Pressable>
 
@@ -242,7 +260,23 @@ const s = StyleSheet.create({
     padding: 24,
   },
   title: { fontSize: 20, fontWeight: "700", color: C.text, textAlign: "right", marginBottom: 4 },
-  subtitle: { fontSize: 13, color: C.mutedFg, textAlign: "right", marginBottom: 24 },
+  subtitle: { fontSize: 13, color: C.mutedFg, textAlign: "right", marginBottom: 20 },
+
+  roleRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  roleBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: C.border,
+    backgroundColor: C.input,
+    gap: 4,
+  },
+  roleIcon: { fontSize: 22 },
+  roleTitle: { fontSize: 14, fontWeight: "700", color: C.text },
+  roleDesc: { fontSize: 11, color: C.mutedFg, textAlign: "center" },
 
   fieldWrap: { marginBottom: 16 },
   label: { fontSize: 13, color: C.mutedFg, textAlign: "right", marginBottom: 6, fontWeight: "500" },
@@ -268,7 +302,7 @@ const s = StyleSheet.create({
 
   strengthRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   strengthBar: { flex: 1, height: 4, borderRadius: 2 },
-  strengthText: { fontSize: 11, marginLeft: 6 },
+  strengthText: { fontSize: 11, marginLeft: 6, width: 36, textAlign: "right" },
 
   errorBox: {
     backgroundColor: "rgba(242,48,48,0.12)",
@@ -292,11 +326,7 @@ const s = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: C.border, marginVertical: 20 },
 
-  loginLink: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  loginLink: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
   loginLinkText: { color: C.mutedFg, fontSize: 14 },
 
   footer: { color: C.mutedFg, fontSize: 11, marginTop: 24, textAlign: "center" },

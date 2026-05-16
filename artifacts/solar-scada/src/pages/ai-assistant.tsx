@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Bot, Send, Image as ImageIcon, Plus, Trash2, X, MessageSquare, Loader2, WifiOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { useOffline } from "@/hooks/useOffline";
 import { useLanguage } from "@/contexts/language-context";
+import { useAuth } from "@/contexts/auth-context";
 import ReactMarkdown from "react-markdown";
 import { format } from "date-fns";
 
@@ -33,6 +34,8 @@ export default function AiAssistant() {
   const [showSidebar, setShowSidebar] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { token } = useAuth();
 
   const { data: conversations = [], isLoading: isLoadingConvs } = useListGeminiConversations();
   const createConv = useCreateGeminiConversation();
@@ -131,7 +134,10 @@ export default function AiAssistant() {
         `${BASE_URL}api/gemini/conversations/${activeConvId}/messages`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ content: messageContent }),
         }
       );
