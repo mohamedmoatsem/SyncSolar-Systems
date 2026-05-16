@@ -46,7 +46,7 @@ export default function DashboardScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const isOnline = useNetworkStatus();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = Platform.OS === "web" ? 67 : 0;
 
   const {
     data: summary,

@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/contexts/AuthContext";
 import { SystemPicker } from "./SystemPicker";
 
@@ -18,6 +19,7 @@ const C = {
 
 export function UserHeader() {
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     Alert.alert("تسجيل الخروج", "هل تريد تسجيل الخروج؟", [
@@ -39,7 +41,7 @@ export function UserHeader() {
   const roleColor = user.role === "technician" ? C.secondary : C.primary;
 
   return (
-    <View style={s.bar}>
+    <View style={[s.bar, { paddingTop: insets.top + 8 }]}>
       <Pressable style={s.logoutBtn} onPress={handleLogout}>
         <Feather name="log-out" size={16} color={C.mutedFg} />
       </Pressable>
@@ -64,7 +66,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderColor: "#202940",
     backgroundColor: "#090e1a",

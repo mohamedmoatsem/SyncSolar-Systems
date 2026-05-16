@@ -13,6 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { LangToggle } from "@/components/LangToggle";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
@@ -31,11 +32,13 @@ const TAB_BAR_HEIGHT = Platform.OS === "web" ? 64 : 0;
 
 let _convId: number | null = null;
 
-async function getOrCreateConv(title: string): Promise<number> {
+async function getOrCreateConv(title: string, token: string | null): Promise<number> {
   if (_convId) return _convId;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${BASE}/api/gemini/conversations`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ title }),
   });
   if (!res.ok) throw new Error("Failed to create conversation");
@@ -47,9 +50,9 @@ async function getOrCreateConv(title: string): Promise<number> {
 export default function AIScreen() {
   const colors = useColors();
   const { t, lang } = useLanguage();
+  const { token } = useAuth();
   const insets = useSafeAreaInsets();
   const isOnline = useNetworkStatus();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = TAB_BAR_HEIGHT + Math.max(insets.bottom, 8);
 
   const greetingMsg = useMemo<Message>(
@@ -81,12 +84,16 @@ export default function AIScreen() {
 
     try {
       const convId = await getOrCreateConv(
-        `SyncSolar Chat ${new Date().toLocaleDateString()}`
+        `SyncSolar Chat ${new Date().toLocaleDateString()}`,
+        token
       );
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const res = await fetch(`${BASE}/api/gemini/conversations/${convId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ content: text }),
       });
 
@@ -115,6 +122,16 @@ export default function AIScreen() {
             try {
               const parsed = JSON.parse(raw);
               if (parsed.done) continue;
+              if (parsed.error) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, content: lang === "ar" ? "⚠️ خطأ في المساعد الذكي" : "⚠️ AI error", pending: false }
+                      : m
+                  )
+                );
+                return;
+              }
 
               const chunk =
                 parsed.content ??
@@ -174,7 +191,7 @@ export default function AIScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: topPad }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
           <View style={[styles.aiIcon, { backgroundColor: colors.primary + "22" }]}>
             <Feather name="cpu" size={16} color={colors.primary} />
@@ -304,7 +321,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingBottom: 14, paddingTop: 14, borderBottomWidth: 1,
+    paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },

@@ -130,7 +130,7 @@ export default function AlertsScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const isOnline = useNetworkStatus();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = Platform.OS === "web" ? 67 : 0;
   const [filter, setFilter] = useState<FilterKey>("active");
 
   const { data, isLoading, refetch, isRefetching, isError, dataUpdatedAt } = useQuery<Alert[]>({

@@ -492,44 +492,57 @@ router.post(
       const liveContext = await buildLiveContext(systemId);
       const systemPrompt = BASE_SYSTEM_PROMPT + liveContext;
 
-      // SSE headers
+      // SSE headers — flush immediately so proxy doesn't time out
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no"); // disable nginx buffering
+      res.flushHeaders(); // establish the SSE connection RIGHT NOW
+
+      // Send initial keep-alive so proxy knows the connection is alive
+      res.write(": connected\n\n");
+
+      // Heartbeat every 10s to prevent proxy from dropping the connection
+      const heartbeat = setInterval(() => {
+        res.write(": heartbeat\n\n");
+      }, 10000);
 
       let fullResponse = "";
 
-      const stream = await ai.models.generateContentStream({
-        model: "gemini-2.5-flash",
-        contents,
-        config: {
-          maxOutputTokens: 8192,
-          systemInstruction: systemPrompt,
-        },
-      });
+      try {
+        const stream = await ai.models.generateContentStream({
+          model: "gemini-2.5-flash",
+          contents,
+          config: {
+            maxOutputTokens: 8192,
+            systemInstruction: systemPrompt,
+          },
+        });
 
-      for await (const chunk of stream) {
-        const text = chunk.text;
-        if (text) {
-          fullResponse += text;
-          res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+        for await (const chunk of stream) {
+          const text = chunk.text;
+          if (text) {
+            fullResponse += text;
+            res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+          }
         }
+
+        // Save assistant reply
+        await db.insert(messagesTable).values({
+          conversationId: id,
+          role: "assistant",
+          content: fullResponse,
+        });
+
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      } catch (_err) {
+        res.write(`data: ${JSON.stringify({ error: "AI generation failed" })}\n\n`);
+      } finally {
+        clearInterval(heartbeat);
+        res.end();
       }
-
-      // Save assistant reply
-      await db.insert(messagesTable).values({
-        conversationId: id,
-        role: "assistant",
-        content: fullResponse,
-      });
-
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
-    } catch (_err) {
-      res.write(
-        `data: ${JSON.stringify({ error: "AI generation failed" })}\n\n`
-      );
-      res.end();
+    } catch (_outerErr) {
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 );

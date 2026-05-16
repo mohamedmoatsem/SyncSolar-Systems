@@ -76,7 +76,7 @@ export default function MonitoringScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const isOnline = useNetworkStatus();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = Platform.OS === "web" ? 67 : 0;
 
   const { data, isLoading, refetch, isRefetching, isError, dataUpdatedAt } = useQuery<Reading>({
     queryKey: ["readings-latest"],
