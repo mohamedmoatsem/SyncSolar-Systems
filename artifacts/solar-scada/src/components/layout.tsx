@@ -12,10 +12,13 @@ import {
   Menu,
   X,
   Languages,
+  LogOut,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOffline } from "@/hooks/useOffline";
 import { useLanguage } from "@/contexts/language-context";
+import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState } from "react";
 
 interface LayoutProps {
@@ -40,6 +43,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [location] = useLocation();
   const isOffline = useOffline();
   const { t, lang } = useLanguage();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { href: "/", label: t.nav.dashboard, icon: LayoutDashboard },
@@ -119,6 +123,33 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
           })}
         </nav>
 
+        {/* User info + logout */}
+        {user && (
+          <div className="p-3 border-t border-sidebar-border">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-sm mb-2"
+              style={{ background: "rgba(255,140,26,0.05)" }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(255,140,26,0.15)" }}>
+                <User className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{user.name}</p>
+                <p className="text-xs text-muted-foreground"
+                  style={{ fontSize: "10px" }}>
+                  {user.role === "technician" ? "فني" : "عميل"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { logout(); onClose(); }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-sm text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span>تسجيل الخروج</span>
+            </button>
+          </div>
+        )}
+
         <div className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
             {isOffline ? (
@@ -143,6 +174,7 @@ export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const isOffline = useOffline();
   const { t, lang, setLang } = useLanguage();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -199,6 +231,23 @@ export function Layout({ children }: LayoutProps) {
               <Languages className="h-3.5 w-3.5 shrink-0" />
               <span>{t.lang.switch}</span>
             </button>
+            {/* User badge + logout in header */}
+            {user && (
+              <div className="flex items-center gap-1.5">
+                <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-sm border border-border text-xs text-muted-foreground"
+                  style={{ borderColor: "rgba(255,140,26,0.3)", background: "rgba(255,140,26,0.05)" }}>
+                  <User className="h-3 w-3 text-primary" />
+                  <span className="text-primary font-medium max-w-24 truncate">{user.name}</span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1 px-2 py-1 rounded-sm border border-border text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5 transition-colors"
+                  title="تسجيل الخروج"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
