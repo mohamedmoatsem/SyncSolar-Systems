@@ -349,15 +349,18 @@ router.post("/gemini/conversations", requireAuth, async (req, res) => {
 });
 
 // Get conversation with messages
-router.get("/gemini/conversations/:id", requireAuth, async (req, res) => {
+router.get("/gemini/conversations/:id", requireAuth, async (req, res): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params["id"] as string);
     const [conv] = await db
       .select()
       .from(conversationsTable)
       .where(eq(conversationsTable.id, id));
 
-    if (!conv) return res.status(404).json({ error: "Conversation not found" });
+    if (!conv) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
 
     const msgs = await db
       .select()
@@ -383,16 +386,19 @@ router.get("/gemini/conversations/:id", requireAuth, async (req, res) => {
 });
 
 // Delete conversation
-router.delete("/gemini/conversations/:id", requireAuth, async (req, res) => {
+router.delete("/gemini/conversations/:id", requireAuth, async (req, res): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params["id"] as string);
     await db.delete(messagesTable).where(eq(messagesTable.conversationId, id));
     const deleted = await db
       .delete(conversationsTable)
       .where(eq(conversationsTable.id, id))
       .returning();
 
-    if (!deleted.length) return res.status(404).json({ error: "Not found" });
+    if (!deleted.length) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
     res.status(204).send();
   } catch (_err) {
     res.status(500).json({ error: "Internal server error" });
@@ -400,9 +406,9 @@ router.delete("/gemini/conversations/:id", requireAuth, async (req, res) => {
 });
 
 // List messages
-router.get("/gemini/conversations/:id/messages", requireAuth, async (req, res) => {
+router.get("/gemini/conversations/:id/messages", requireAuth, async (req, res): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params["id"] as string);
     const msgs = await db
       .select()
       .from(messagesTable)
@@ -427,9 +433,9 @@ router.get("/gemini/conversations/:id/messages", requireAuth, async (req, res) =
 router.post(
   "/gemini/conversations/:id/messages",
   requireAuth,
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params["id"] as string);
       const { content } = req.body;
 
       // Save user message

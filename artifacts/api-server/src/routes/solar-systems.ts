@@ -5,29 +5,33 @@ import { requireAuth, requireRole } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/solar-systems", requireAuth, requireRole("technician"), async (req, res) => {
+router.get("/solar-systems", requireAuth, requireRole("technician"), async (req, res): Promise<void> => {
   try {
     const systems = await db.select().from(solarSystemsTable).orderBy(solarSystemsTable.id);
-    return res.json(systems);
+    res.json(systems);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-router.get("/solar-systems/:id", requireAuth, async (req, res) => {
+router.get("/solar-systems/:id", requireAuth, async (req, res): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params["id"] as string);
     if (req.user?.role === "client" && req.user.solarSystemId !== id) {
-      return res.status(403).json({ error: "Access denied to this system" });
+      res.status(403).json({ error: "Access denied to this system" });
+      return;
     }
     const [system] = await db
       .select()
       .from(solarSystemsTable)
       .where(eq(solarSystemsTable.id, id));
-    if (!system) return res.status(404).json({ error: "System not found" });
-    return res.json(system);
+    if (!system) {
+      res.status(404).json({ error: "System not found" });
+      return;
+    }
+    res.json(system);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 

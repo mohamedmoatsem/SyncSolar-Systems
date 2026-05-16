@@ -40,7 +40,7 @@ export default function AiAssistant() {
 
   const { data: activeConversation, isLoading: isLoadingConv } = useGetGeminiConversation(
     activeConvId!,
-    { query: { enabled: !!activeConvId } }
+    { query: { enabled: !!activeConvId, queryKey: [] } }
   );
 
   useEffect(() => {

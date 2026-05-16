@@ -1,4 +1,5 @@
 import { useListLogs } from "@workspace/api-client-react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ export default function Logs() {
 
   const { data: logsResponse, isLoading } = useListLogs(
     { page, limit },
-    { query: { keepPreviousData: true } }
+    { query: { placeholderData: keepPreviousData, queryKey: [] } }
   );
 
   const PrevIcon = isRTL ? ChevronRight : ChevronLeft;

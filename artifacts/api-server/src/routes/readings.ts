@@ -6,7 +6,7 @@ import { requireAuth, getSystemId } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/readings/latest", requireAuth, async (req, res) => {
+router.get("/readings/latest", requireAuth, async (req, res): Promise<void> => {
   try {
     const systemId = getSystemId(req);
     const reading = await db
@@ -17,7 +17,8 @@ router.get("/readings/latest", requireAuth, async (req, res) => {
       .limit(1);
 
     if (reading.length === 0) {
-      return res.status(404).json({ error: "No readings found" });
+      res.status(404).json({ error: "No readings found" });
+      return;
     }
 
     const r = reading[0];
@@ -34,12 +35,12 @@ router.get("/readings/latest", requireAuth, async (req, res) => {
       systemStatus: r.systemStatus,
       timestamp: r.timestamp.toISOString(),
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/readings/history", requireAuth, async (req, res) => {
+router.get("/readings/history", requireAuth, async (req, res): Promise<void> => {
   try {
     const systemId = getSystemId(req);
     const hours = parseInt(req.query.hours as string) || 24;
@@ -70,12 +71,12 @@ router.get("/readings/history", requireAuth, async (req, res) => {
       value: r[field] as number,
       metric,
     })));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.post("/readings", requireAuth, async (req, res) => {
+router.post("/readings", requireAuth, async (req, res): Promise<void> => {
   try {
     const systemId = getSystemId(req);
     const {
@@ -106,7 +107,7 @@ router.post("/readings", requireAuth, async (req, res) => {
       systemStatus: reading.systemStatus,
       timestamp: reading.timestamp.toISOString(),
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });

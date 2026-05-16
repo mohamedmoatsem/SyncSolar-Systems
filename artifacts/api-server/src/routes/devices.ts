@@ -6,7 +6,7 @@ import { requireAuth, getSystemId } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/devices", requireAuth, async (req, res) => {
+router.get("/devices", requireAuth, async (req, res): Promise<void> => {
   try {
     const systemId = getSystemId(req);
     const devices = await db
@@ -25,14 +25,14 @@ router.get("/devices", requireAuth, async (req, res) => {
         location: d.location,
       }))
     );
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.patch("/devices/:id/toggle", requireAuth, async (req, res) => {
+router.patch("/devices/:id/toggle", requireAuth, async (req, res): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params["id"] as string);
     const systemId = getSystemId(req);
     const { isEnabled } = req.body;
 
@@ -43,7 +43,8 @@ router.patch("/devices/:id/toggle", requireAuth, async (req, res) => {
       .returning();
 
     if (!updated) {
-      return res.status(404).json({ error: "Device not found" });
+      res.status(404).json({ error: "Device not found" });
+      return;
     }
 
     res.json({
@@ -55,7 +56,7 @@ router.patch("/devices/:id/toggle", requireAuth, async (req, res) => {
       powerRating: updated.powerRating,
       location: updated.location,
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });

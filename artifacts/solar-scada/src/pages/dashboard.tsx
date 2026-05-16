@@ -9,10 +9,10 @@ export default function Dashboard() {
   const { t } = useLanguage();
 
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({
-    query: { refetchInterval: 5000 },
+    query: { refetchInterval: 5000, queryKey: [] },
   });
   const { data: latest, isLoading: loadingLatest } = useGetLatestReadings({
-    query: { refetchInterval: 5000 },
+    query: { refetchInterval: 5000, queryKey: [] },
   });
   const { data: energyChart } = useGetEnergyToday();
 

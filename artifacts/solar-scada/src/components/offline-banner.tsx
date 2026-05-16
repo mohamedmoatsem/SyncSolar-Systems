@@ -14,6 +14,7 @@ export function OfflineBanner() {
       const timer = setTimeout(() => setJustCameOnline(false), 3000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isOffline]);
 
   if (!isOffline && !justCameOnline) return null;

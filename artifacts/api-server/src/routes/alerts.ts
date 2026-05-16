@@ -6,7 +6,7 @@ import { requireAuth, getSystemId } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/alerts", requireAuth, async (req, res) => {
+router.get("/alerts", requireAuth, async (req, res): Promise<void> => {
   try {
     const systemId = getSystemId(req);
     const status = (req.query.status as string) || "all";
@@ -33,14 +33,14 @@ router.get("/alerts", requireAuth, async (req, res) => {
         resolvedAt: a.resolvedAt ? a.resolvedAt.toISOString() : null,
       }))
     );
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.patch("/alerts/:id/resolve", requireAuth, async (req, res) => {
+router.patch("/alerts/:id/resolve", requireAuth, async (req, res): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params["id"] as string);
     const systemId = getSystemId(req);
 
     const [updated] = await db
@@ -50,7 +50,8 @@ router.patch("/alerts/:id/resolve", requireAuth, async (req, res) => {
       .returning();
 
     if (!updated) {
-      return res.status(404).json({ error: "Alert not found" });
+      res.status(404).json({ error: "Alert not found" });
+      return;
     }
 
     res.json({
@@ -62,7 +63,7 @@ router.patch("/alerts/:id/resolve", requireAuth, async (req, res) => {
       timestamp: updated.timestamp.toISOString(),
       resolvedAt: updated.resolvedAt ? updated.resolvedAt.toISOString() : null,
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });

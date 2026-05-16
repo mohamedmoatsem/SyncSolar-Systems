@@ -14,10 +14,10 @@ export default function Monitoring() {
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  const { data: latest } = useGetLatestReadings({ query: { refetchInterval: 5000 } });
+  const { data: latest } = useGetLatestReadings({ query: { refetchInterval: 5000, queryKey: [] } });
   const { data: history, refetch } = useGetReadingsHistory(
     { metric: metric as any, hours: parseInt(hours) },
-    { query: { enabled: true } }
+    { query: { enabled: true, queryKey: [] } }
   );
   const createReading = useCreateReading();
 
