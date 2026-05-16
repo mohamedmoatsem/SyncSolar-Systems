@@ -54,12 +54,19 @@ function AlertItem({ alert, isOnline }: { alert: Alert; isOnline: boolean }) {
     : alert.severity === "warning" ? "alert-triangle"
     : "info";
 
+  const [resolveErr, setResolveErr] = useState(false);
+
   const mutation = useMutation({
     mutationFn: () => apiFetch(`/api/alerts/${alert.id}/resolve`, { method: "PATCH" }),
     onSuccess: () => {
+      setResolveErr(false);
       qc.invalidateQueries({ queryKey: ["alerts"] });
       qc.invalidateQueries({ queryKey: ["dashboard-summary"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    },
+    onError: () => {
+      setResolveErr(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     },
   });
 
@@ -93,17 +100,31 @@ function AlertItem({ alert, isOnline }: { alert: Alert; isOnline: boolean }) {
 
       <Text style={[styles.alertMsg, { color: colors.foreground }]}>{alert.message}</Text>
 
+      {resolveErr && (
+        <Text style={[styles.errTxt, { color: colors.destructive }]}>
+          {t.resolveError}
+        </Text>
+      )}
+
       {alert.status === "active" && (
         <TouchableOpacity
           style={[
             styles.resolveBtn,
             {
-              borderColor: isOnline ? colors.success + "55" : colors.border,
-              backgroundColor: isOnline ? colors.success + "11" : colors.muted,
+              borderColor: resolveErr
+                ? colors.destructive + "55"
+                : isOnline
+                ? colors.success + "55"
+                : colors.border,
+              backgroundColor: resolveErr
+                ? colors.destructive + "11"
+                : isOnline
+                ? colors.success + "11"
+                : colors.muted,
               opacity: isOnline ? 1 : 0.5,
             },
           ]}
-          onPress={() => mutation.mutate()}
+          onPress={() => { setResolveErr(false); mutation.mutate(); }}
           disabled={mutation.isPending || !isOnline}
           activeOpacity={0.7}
         >
@@ -111,9 +132,18 @@ function AlertItem({ alert, isOnline }: { alert: Alert; isOnline: boolean }) {
             <ActivityIndicator size="small" color={colors.success} />
           ) : (
             <>
-              <Feather name="check" size={13} color={isOnline ? colors.success : colors.mutedForeground} />
-              <Text style={[styles.resolveTxt, { color: isOnline ? colors.success : colors.mutedForeground }]}>
-                {t.resolve}
+              <Feather
+                name={resolveErr ? "alert-circle" : "check"}
+                size={13}
+                color={resolveErr ? colors.destructive : isOnline ? colors.success : colors.mutedForeground}
+              />
+              <Text
+                style={[
+                  styles.resolveTxt,
+                  { color: resolveErr ? colors.destructive : isOnline ? colors.success : colors.mutedForeground },
+                ]}
+              >
+                {resolveErr ? t.retryResolve : t.resolve}
               </Text>
             </>
           )}
@@ -278,6 +308,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 8, alignSelf: "flex-start", minHeight: 32,
   },
   resolveTxt: { fontSize: 12, fontWeight: "600" },
+  errTxt: { fontSize: 11, marginBottom: 4 },
   center: { alignItems: "center", marginTop: 80, gap: 12 },
   emptyText: { fontSize: 14, marginTop: 8 },
 });

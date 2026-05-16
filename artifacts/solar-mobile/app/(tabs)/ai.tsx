@@ -16,6 +16,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { LangToggle } from "@/components/LangToggle";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { apiUrl } from "@/hooks/useApi";
 
 interface Message {
   id: string;
@@ -24,27 +25,35 @@ interface Message {
   pending?: boolean;
 }
 
-const BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-  : "";
-
 const TAB_BAR_HEIGHT = Platform.OS === "web" ? 64 : 0;
 
 let _convId: number | null = null;
 
 async function getOrCreateConv(title: string, token: string | null): Promise<number> {
   if (_convId) return _convId;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${BASE}/api/gemini/conversations`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ title }),
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", apiUrl("/api/gemini/conversations"));
+    xhr.setRequestHeader("Content-Type", "application/json");
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (data.id) {
+          _convId = data.id;
+          resolve(data.id);
+        } else {
+          reject(new Error("Bad response"));
+        }
+      } catch {
+        reject(new Error("Parse error"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Network error"));
+    xhr.timeout = 15000;
+    xhr.ontimeout = () => reject(new Error("Timeout"));
+    xhr.send(JSON.stringify({ title }));
   });
-  if (!res.ok) throw new Error("Failed to create conversation");
-  const conv = await res.json();
-  _convId = conv.id;
-  return conv.id;
 }
 
 export default function AIScreen() {
@@ -54,6 +63,7 @@ export default function AIScreen() {
   const insets = useSafeAreaInsets();
   const isOnline = useNetworkStatus();
   const bottomPad = TAB_BAR_HEIGHT + Math.max(insets.bottom, 8);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const greetingMsg = useMemo<Message>(
     () => ({ id: "greeting", role: "assistant", content: t.aiGreeting }),
@@ -88,31 +98,22 @@ export default function AIScreen() {
         token
       );
 
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
 
-      const res = await fetch(`${BASE}/api/gemini/conversations/${convId}/messages`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ content: text }),
-      });
+        xhr.open("POST", apiUrl(`/api/gemini/conversations/${convId}/messages`));
+        xhr.setRequestHeader("Content-Type", "application/json");
+        if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (reader) {
+        let processedLength = 0;
         let accumulated = "";
-        let buffer = "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
+        xhr.onprogress = () => {
+          const newChunk = xhr.responseText.substring(processedLength);
+          processedLength = xhr.responseText.length;
 
+          const lines = newChunk.split("\n");
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed.startsWith("data:")) continue;
@@ -133,12 +134,7 @@ export default function AIScreen() {
                 return;
               }
 
-              const chunk =
-                parsed.content ??
-                parsed.choices?.[0]?.delta?.content ??
-                parsed.text ??
-                "";
-
+              const chunk = parsed.content ?? parsed.text ?? "";
               if (chunk) {
                 accumulated += chunk;
                 const snap = accumulated;
@@ -150,22 +146,30 @@ export default function AIScreen() {
               }
             } catch {}
           }
-        }
+        };
 
-        if (!accumulated) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? {
-                    ...m,
-                    content: lang === "ar" ? "⚠️ لم يصل أي رد من المساعد." : "⚠️ No response received.",
-                    pending: false,
-                  }
-                : m
-            )
-          );
-        }
-      }
+        xhr.onload = () => {
+          if (!accumulated) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content: lang === "ar" ? "⚠️ لم يصل أي رد من المساعد." : "⚠️ No response received.",
+                      pending: false,
+                    }
+                  : m
+              )
+            );
+          }
+          resolve();
+        };
+
+        xhr.onerror = () => reject(new Error(lang === "ar" ? "خطأ في الشبكة" : "Network error"));
+        xhr.ontimeout = () => reject(new Error(lang === "ar" ? "انتهت مهلة الطلب" : "Request timed out"));
+        xhr.timeout = 120000;
+        xhr.send(JSON.stringify({ content: text }));
+      });
     } catch (err: any) {
       const errMsg =
         lang === "ar"
@@ -174,17 +178,22 @@ export default function AIScreen() {
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, content: errMsg, pending: false } : m
+          m.id === `a-${Date.now() + 1}` || m.pending
+            ? { ...m, content: errMsg, pending: false }
+            : m
         )
       );
     } finally {
+      xhrRef.current = null;
       setStreaming(false);
     }
   };
 
   const resetConv = () => {
+    xhrRef.current?.abort();
     _convId = null;
     setMessages([greetingMsg]);
+    setStreaming(false);
   };
 
   const canSend = !!input.trim() && !streaming;
@@ -346,11 +355,7 @@ const styles = StyleSheet.create({
   bubbleText: { fontSize: 14, lineHeight: 20 },
   typingRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   typingText: { fontSize: 14 },
-  inputBar: {
-    borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-  },
+  inputBar: { borderTopWidth: 1, paddingHorizontal: 16, paddingTop: 10 },
   offlineNote: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginBottom: 8,

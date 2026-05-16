@@ -9,6 +9,7 @@ const translations = {
       alerts: "Alerts",
       logs: "Logs",
       ai_assistant: "AI Assistant",
+      user_guide: "User Guide",
     },
     sys: {
       online: "SYS_ONLINE_OK",
@@ -138,6 +139,7 @@ const translations = {
       alerts: "التنبيهات",
       logs: "السجلات",
       ai_assistant: "المساعد الذكي",
+      user_guide: "دليل الاستخدام",
     },
     sys: {
       online: "النظام_متصل",

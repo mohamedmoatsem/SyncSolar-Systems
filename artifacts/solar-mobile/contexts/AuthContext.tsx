@@ -106,7 +106,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error ?? "Login failed");
+      const rawMsg: string = err.error ?? "";
+      const translated =
+        rawMsg === "Invalid credentials" || rawMsg === "Invalid email or password"
+          ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+          : rawMsg === "User not found"
+          ? "المستخدم غير موجود"
+          : rawMsg === "Missing fields" || rawMsg === "Invalid request"
+          ? "يرجى إدخال البريد الإلكتروني وكلمة المرور"
+          : rawMsg || "فشل تسجيل الدخول، حاول مرة أخرى";
+      throw new Error(translated);
     }
     const data = await res.json();
     await AsyncStorage.setItem(TOKEN_KEY, data.token);

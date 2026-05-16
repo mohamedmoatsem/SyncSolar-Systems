@@ -8,6 +8,7 @@ import {
   Zap,
   TerminalSquare,
   Bot,
+  BookOpen,
   WifiOff,
   Menu,
   X,
@@ -52,6 +53,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
     { href: "/alerts", label: t.nav.alerts, icon: AlertTriangle },
     { href: "/logs", label: t.nav.logs, icon: Database },
     { href: "/ai-assistant", label: t.nav.ai_assistant, icon: Bot },
+    { href: "/user-guide", label: t.nav.user_guide, icon: BookOpen },
   ];
 
   return (
@@ -188,6 +190,7 @@ export function Layout({ children }: LayoutProps) {
     { href: "/alerts", label: t.nav.alerts },
     { href: "/logs", label: t.nav.logs },
     { href: "/ai-assistant", label: t.nav.ai_assistant },
+    { href: "/user-guide", label: t.nav.user_guide },
   ];
 
   return (

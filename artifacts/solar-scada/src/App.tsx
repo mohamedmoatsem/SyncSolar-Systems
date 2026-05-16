@@ -13,6 +13,7 @@ import Devices from "@/pages/devices";
 import Alerts from "@/pages/alerts";
 import Logs from "@/pages/logs";
 import AiAssistant from "@/pages/ai-assistant";
+import UserGuide from "@/pages/user-guide";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 
@@ -79,6 +80,7 @@ function AppRouter() {
         <Route path="/alerts" component={Alerts} />
         <Route path="/logs" component={Logs} />
         <Route path="/ai-assistant" component={AiAssistant} />
+        <Route path="/user-guide" component={UserGuide} />
         <Route path="/login">
           <Redirect to="/" />
         </Route>
