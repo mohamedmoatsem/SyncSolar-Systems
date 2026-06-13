@@ -98,7 +98,7 @@ export default function DashboardScreen() {
           <Image source={APP_ICON} style={styles.logoImg} resizeMode="contain" />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-              SyncSolar Systems
+              Sync Solar System
             </Text>
             <Text style={[styles.headerSub, { color: colors.mutedForeground }]} numberOfLines={1}>
               {isOnline ? t.liveData : t.offlineMode}

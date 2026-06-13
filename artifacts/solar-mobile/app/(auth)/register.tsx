@@ -84,7 +84,7 @@ export default function RegisterScreen() {
               style={s.logo}
               resizeMode="contain"
             />
-            <Text style={s.brand}>SyncSolar Systems</Text>
+            <Text style={s.brand}>Sync Solar System</Text>
             <Text style={s.tagline}>منصة مراقبة الطاقة الشمسية</Text>
           </View>
 
@@ -234,7 +234,7 @@ export default function RegisterScreen() {
             </Pressable>
           </View>
 
-          <Text style={s.footer}>© 2026 SyncSolar Systems</Text>
+          <Text style={s.footer}>© 2026 Sync Solar System</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

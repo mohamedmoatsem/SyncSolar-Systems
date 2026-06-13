@@ -249,8 +249,8 @@ export default function IoTGuidePage() {
             </h1>
             <p className="text-base leading-relaxed" style={{ color: "#758ab0" }}>
               {ar
-                ? "تعلّم كيفية ربط أنظمة الطاقة الشمسية المختلفة بمنصة SyncSolar لمراقبة وتحكم كاملَين في الوقت الحقيقي"
-                : "Learn how to connect various solar energy systems to SyncSolar for full real-time monitoring and control"}
+                ? "تعلّم كيفية ربط أنظمة الطاقة الشمسية المختلفة بمنصة Sync Solar System لمراقبة وتحكم كاملَين في الوقت الحقيقي"
+                : "Learn how to connect various solar energy systems to Sync Solar System for full real-time monitoring and control"}
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               {["Modbus TCP", "MQTT", "RS-485", "HTTP API", "LoRa"].map((tag) => (
@@ -275,8 +275,8 @@ export default function IoTGuidePage() {
         <Info className="h-5 w-5 shrink-0 mt-0.5" style={{ color: "#00c8d8" }} />
         <p className="text-sm leading-relaxed" style={{ color: "#758ab0" }}>
           {ar
-            ? "يعمل SyncSolar Systems كطبقة برمجية فوق طبقة الأجهزة — تتلقى البيانات من بوابات IoT وتحوّلها إلى معلومات مرئية قابلة للتحليل والتحكم. الأجهزة لا تتصل مباشرةً بالمنصة بل عبر وسيط (Gateway/Broker)."
-            : "SyncSolar Systems acts as a software layer above the hardware layer — receiving data from IoT gateways and converting it into visual, analyzable, and controllable information. Devices do not connect directly to the platform but through an intermediary (Gateway/Broker)."}
+            ? "يعمل Sync Solar System كطبقة برمجية فوق طبقة الأجهزة — تتلقى البيانات من بوابات IoT وتحوّلها إلى معلومات مرئية قابلة للتحليل والتحكم. الأجهزة لا تتصل مباشرةً بالمنصة بل عبر وسيط (Gateway/Broker)."
+            : "Sync Solar System acts as a software layer above the hardware layer — receiving data from IoT gateways and converting it into visual, analyzable, and controllable information. Devices do not connect directly to the platform but through an intermediary (Gateway/Broker)."}
         </p>
       </div>
 
@@ -438,7 +438,7 @@ export default function IoTGuidePage() {
               { labelAr: "العاكس / وحدة التحكم / العداد الذكي", labelEn: "Inverter / Controller / Smart Meter", icon: <Cpu className="h-4 w-4" />, color: "#22c55e" },
               { labelAr: "بوابة IoT (RS-485 → Ethernet / 4G)", labelEn: "IoT Gateway (RS-485 → Ethernet / 4G)", icon: <Network className="h-4 w-4" />, color: "#00c8d8" },
               { labelAr: "وسيط MQTT / Modbus TCP Bridge", labelEn: "MQTT Broker / Modbus TCP Bridge", icon: <Radio className="h-4 w-4" />, color: "#a855f7" },
-              { labelAr: "خادم API — SyncSolar Systems", labelEn: "API Server — SyncSolar Systems", icon: <Server className="h-4 w-4" />, color: "#ff8c1a" },
+              { labelAr: "خادم API — Sync Solar System", labelEn: "API Server — Sync Solar System", icon: <Server className="h-4 w-4" />, color: "#ff8c1a" },
               { labelAr: "لوحة التحكم (ويب) + التطبيق (جوّال)", labelEn: "Dashboard (Web) + App (Mobile)", icon: <Globe className="h-4 w-4" />, color: "#00c8d8" },
             ].map((item, i, arr) => (
               <div key={i} className="w-full flex flex-col items-center">
@@ -544,8 +544,8 @@ export default function IoTGuidePage() {
           />
           <Step
             num={5}
-            titleAr="تكوين الجهاز في SyncSolar"
-            titleEn="Configure Device in SyncSolar"
+            titleAr="تكوين الجهاز في Sync Solar System"
+            titleEn="Configure Device in Sync Solar System"
             items={[
               "اذهب إلى صفحة 'الأجهزة' واضغط زر إضافة جهاز جديد",
               "أدخل نوع الجهاز، الموقع، IP الخادم، ورقم منفذ Modbus ID",

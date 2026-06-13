@@ -94,7 +94,7 @@ export default function AIScreen() {
 
     try {
       const convId = await getOrCreateConv(
-        `SyncSolar Chat ${new Date().toLocaleDateString()}`,
+        `Sync Solar System Chat ${new Date().toLocaleDateString()}`,
         token
       );
 

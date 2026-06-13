@@ -71,7 +71,7 @@ export default function RegisterPage() {
           >
             <Sun className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">SyncSolar Systems</h1>
+          <h1 className="text-2xl font-bold text-white">Sync Solar System</h1>
           <p className="text-sm mt-1" style={{ color: "#758ab0" }}>
             منصة مراقبة الطاقة الشمسية
           </p>
@@ -317,7 +317,7 @@ export default function RegisterPage() {
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: "#4a5568" }}>
-          © 2026 SyncSolar Systems
+          © 2026 Sync Solar System
         </p>
       </div>
     </div>

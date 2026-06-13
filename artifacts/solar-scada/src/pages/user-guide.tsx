@@ -154,7 +154,7 @@ export default function UserGuide() {
         <div>
           <h2 className="text-xl font-bold tracking-tight uppercase">{t.nav.user_guide}</h2>
           <p className="text-sm text-muted-foreground font-mono">
-            {isAr ? "دليل استخدام منصة SyncSolar Systems" : "SyncSolar Systems Usage Guide"}
+            {isAr ? "دليل استخدام منصة Sync Solar System" : "Sync Solar System Usage Guide"}
           </p>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function UserGuide() {
 
       {/* Footer note */}
       <p className="text-xs text-muted-foreground text-center font-mono pb-4">
-        SyncSolar Systems v2026 · {isAr ? "للدعم التقني تواصل مع مزود الخدمة" : "For technical support, contact your service provider"}
+        Sync Solar System v2026 · {isAr ? "للدعم التقني تواصل مع مزود الخدمة" : "For technical support, contact your service provider"}
       </p>
     </div>
   );

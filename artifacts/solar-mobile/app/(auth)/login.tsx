@@ -70,7 +70,7 @@ export default function LoginScreen() {
               style={s.logo}
               resizeMode="contain"
             />
-            <Text style={s.brand}>SyncSolar Systems</Text>
+            <Text style={s.brand}>Sync Solar System</Text>
             <Text style={s.tagline}>منصة مراقبة الطاقة الشمسية</Text>
           </View>
 
@@ -154,7 +154,7 @@ export default function LoginScreen() {
             </Text>
           </Pressable>
 
-          <Text style={s.footer}>© 2026 SyncSolar Systems</Text>
+          <Text style={s.footer}>© 2026 Sync Solar System</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
