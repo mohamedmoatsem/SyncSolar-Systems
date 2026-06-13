@@ -15,6 +15,7 @@ import {
   Languages,
   LogOut,
   User,
+  Wifi,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOffline } from "@/hooks/useOffline";
@@ -54,6 +55,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
     { href: "/logs", label: t.nav.logs, icon: Database },
     { href: "/ai-assistant", label: t.nav.ai_assistant, icon: Bot },
     { href: "/user-guide", label: t.nav.user_guide, icon: BookOpen },
+    { href: "/iot-guide", label: t.nav.iot_guide, icon: Wifi },
   ];
 
   return (
@@ -191,6 +193,7 @@ export function Layout({ children }: LayoutProps) {
     { href: "/logs", label: t.nav.logs },
     { href: "/ai-assistant", label: t.nav.ai_assistant },
     { href: "/user-guide", label: t.nav.user_guide },
+    { href: "/iot-guide", label: t.nav.iot_guide },
   ];
 
   return (

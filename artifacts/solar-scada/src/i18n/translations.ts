@@ -10,6 +10,7 @@ const translations = {
       logs: "Logs",
       ai_assistant: "AI Assistant",
       user_guide: "User Guide",
+      iot_guide: "IoT Integration",
     },
     sys: {
       online: "SYS_ONLINE_OK",
@@ -140,6 +141,7 @@ const translations = {
       logs: "السجلات",
       ai_assistant: "المساعد الذكي",
       user_guide: "دليل الاستخدام",
+      iot_guide: "ربط أجهزة IoT",
     },
     sys: {
       online: "النظام_متصل",

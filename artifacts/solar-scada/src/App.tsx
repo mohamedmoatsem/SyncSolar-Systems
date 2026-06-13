@@ -14,6 +14,7 @@ import Alerts from "@/pages/alerts";
 import Logs from "@/pages/logs";
 import AiAssistant from "@/pages/ai-assistant";
 import UserGuide from "@/pages/user-guide";
+import IoTGuide from "@/pages/iot-guide";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 
@@ -81,6 +82,7 @@ function AppRouter() {
         <Route path="/logs" component={Logs} />
         <Route path="/ai-assistant" component={AiAssistant} />
         <Route path="/user-guide" component={UserGuide} />
+        <Route path="/iot-guide" component={IoTGuide} />
         <Route path="/login">
           <Redirect to="/" />
         </Route>
