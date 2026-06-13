@@ -25,7 +25,7 @@ interface Message {
   pending?: boolean;
 }
 
-const TAB_BAR_HEIGHT = Platform.OS === "web" ? 64 : 0;
+const TAB_BAR_HEIGHT = Platform.OS === "web" ? 64 : 49;
 
 let _convId: number | null = null;
 

@@ -96,9 +96,11 @@ export default function DashboardScreen() {
       <View style={[styles.header, { paddingTop: topPad, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
           <Image source={APP_ICON} style={styles.logoImg} resizeMode="contain" />
-          <View>
-            <Text style={[styles.headerTitle, { color: colors.foreground }]}>SyncSolar Systems</Text>
-            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
+              SyncSolar Systems
+            </Text>
+            <Text style={[styles.headerSub, { color: colors.mutedForeground }]} numberOfLines={1}>
               {isOnline ? t.liveData : t.offlineMode}
             </Text>
           </View>
@@ -224,18 +226,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 14,
-    paddingTop: 14,
+    paddingBottom: 12,
+    paddingTop: 12,
     borderBottomWidth: 1,
+    gap: 8,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, minWidth: 0 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
   logoImg: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 8,
+    flexShrink: 0,
   },
-  headerTitle: { fontSize: 18, fontWeight: "700", letterSpacing: -0.3 },
+  headerTitle: { fontSize: 15, fontWeight: "700", letterSpacing: -0.3, flexShrink: 1 },
   headerSub: { fontSize: 10, fontWeight: "500", marginTop: 1 },
   section: { paddingTop: 4 },
   grid: {

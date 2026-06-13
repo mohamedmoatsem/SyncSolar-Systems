@@ -84,10 +84,10 @@ export function MetricCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
-    gap: 5,
-    minWidth: 130,
+    gap: 4,
+    minWidth: 0,
   },
   cardTop: {
     flexDirection: "row",

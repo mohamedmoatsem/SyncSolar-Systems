@@ -82,12 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      const msg = err.error ?? "Registration failed";
-      throw new Error(
-        msg === "Email already registered"
+      const rawMsg: string = err.error ?? "";
+      const translated =
+        rawMsg === "Email already registered"
           ? "هذا البريد الإلكتروني مسجّل بالفعل"
-          : msg
-      );
+          : rawMsg === "name, email and password are required"
+          ? "يرجى ملء جميع الحقول المطلوبة"
+          : rawMsg === "role must be client or technician"
+          ? "نوع الحساب غير صحيح"
+          : rawMsg || "فشل إنشاء الحساب، حاول مرة أخرى";
+      throw new Error(translated);
     }
     const data = await res.json();
     await AsyncStorage.setItem(TOKEN_KEY, data.token);

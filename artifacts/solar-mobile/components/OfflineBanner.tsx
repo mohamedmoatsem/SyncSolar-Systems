@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
-  Platform,
   StyleSheet,
   Text,
   View,
@@ -10,6 +9,8 @@ import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+
+const BANNER_HEIGHT = 36;
 
 export function OfflineBanner() {
   const colors = useColors();
@@ -35,51 +36,54 @@ export function OfflineBanner() {
       Animated.timing(anim, {
         toValue: 1,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     } else if (wasOffline.current) {
       Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: false }),
         Animated.delay(2000),
-        Animated.timing(anim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 300, useNativeDriver: false }),
       ]).start(() => {
         wasOffline.current = false;
       });
     } else {
-      Animated.timing(anim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+      Animated.timing(anim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
     }
   }, [isOnline]);
 
+  const height = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, BANNER_HEIGHT],
+  });
+
   return (
     <Animated.View
-      style={[
-        styles.banner,
-        { backgroundColor: bgColor, opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-40, 0] }) }] },
-      ]}
+      style={[styles.wrapper, { height, backgroundColor: bgColor }]}
       pointerEvents="none"
     >
-      <Feather
-        name={isOnline ? "wifi" : "wifi-off"}
-        size={13}
-        color="#fff"
-      />
-      <Text style={styles.text}>{label}</Text>
+      <View style={styles.inner}>
+        <Feather
+          name={isOnline ? "wifi" : "wifi-off"}
+          size={13}
+          color="#fff"
+        />
+        <Text style={styles.text}>{label}</Text>
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    position: "absolute",
-    top: Platform.OS === "web" ? 0 : 0,
-    left: 0,
-    right: 0,
-    zIndex: 999,
+  wrapper: {
+    overflow: "hidden",
+    width: "100%",
+  },
+  inner: {
+    height: BANNER_HEIGHT,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   text: {
