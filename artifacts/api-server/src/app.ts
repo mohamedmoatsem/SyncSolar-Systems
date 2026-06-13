@@ -34,6 +34,7 @@ app.use(
         !origin ||
         origin.includes(".replit.dev") ||
         origin.includes(".picard.replit.dev") ||
+        origin.includes(".replit.app") ||
         origin.includes("localhost") ||
         origin.includes("127.0.0.1")
       ) {

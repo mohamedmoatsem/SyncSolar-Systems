@@ -110,9 +110,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: "Solar SCADA Dashboard",
-        short_name: "SOLAR_SCADA",
-        description: "Solar Energy Monitoring & Control System with SCADA and IoT",
+        name: "Sync Solar System",
+        short_name: "SyncSolar",
+        description: "Sync Solar System — Solar Energy Monitoring & Control",
         theme_color: "#0a0f1a",
         background_color: "#0a0f1a",
         display: "standalone",
