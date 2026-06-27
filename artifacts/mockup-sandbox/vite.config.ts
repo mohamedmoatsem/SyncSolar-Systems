@@ -5,7 +5,6 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { mockupPreviewPlugin } from "./mockupPreviewPlugin";
 
-// استخدام المنفذ المتاح في البيئة، أو وضع 3000 كقيمة افتراضية
 const rawPort = process.env.PORT || "3000";
 const port = Number(rawPort);
 
@@ -13,7 +12,6 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-// استخدام BASE_PATH المتاح في البيئة، أو وضع '/' كقيمة افتراضية للإنتاج
 const basePath = process.env.BASE_PATH || "/";
 
 export default defineConfig({
@@ -23,16 +21,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-        ]
-      : []),
   ],
   resolve: {
     alias: {
@@ -43,6 +31,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
+    target: "es2022", // إجبار المترجم على دعم الميزات الحديثة إذا دعت الحاجة
   },
   server: {
     port,
@@ -58,4 +47,3 @@ export default defineConfig({
     allowedHosts: true,
   },
 });
-
