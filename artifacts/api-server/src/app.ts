@@ -1,4 +1,5 @@
-import express, { type Express } from "express";
+import path from "path";
+import express, { type Express, type Request, type Response } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
@@ -55,6 +56,21 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ── API routes (must come before static serving) ──────────────────────────────
 app.use("/api", router);
+
+// ── Static frontend (mockup-sandbox build output) ─────────────────────────────
+const frontendDist = path.resolve(
+  import.meta.dirname,
+  "../../mockup-sandbox/dist",
+);
+
+app.use(express.static(frontendDist));
+
+// ── Catch-all: any non-/api request → index.html (SPA fallback) ──────────────
+// Express 5 requires "/{*path}" instead of "*" (path-to-regexp v8)
+app.get("/{*path}", (_req: Request, res: Response) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 export default app;
