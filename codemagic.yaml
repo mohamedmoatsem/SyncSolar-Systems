@@ -2,6 +2,7 @@ workflows:
   android-workflow:
     name: Android Release (Flutter)
     max_build_duration: 60
+    working_directory: artifacts/mockup-sandbox
     environment:
       flutter: stable
       java: 17
@@ -26,7 +27,7 @@ workflows:
             --build-name=1.0.0 \
             --build-number=$BUILD_NUMBER
     artifacts:
-      - build/**/outputs/**/*.apk
+      - artifacts/mockup-sandbox/build/**/outputs/**/*.apk
       - flutter_drive.log
     publishing:
       email:
@@ -39,6 +40,7 @@ workflows:
   ios-workflow:
     name: iOS Release (Flutter)
     max_build_duration: 60
+    working_directory: artifacts/mockup-sandbox
     environment:
       flutter: stable
       xcode: latest
@@ -68,7 +70,7 @@ workflows:
             --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
-      - build/ios/ipa/*.ipa
+      - artifacts/mockup-sandbox/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
     publishing:
