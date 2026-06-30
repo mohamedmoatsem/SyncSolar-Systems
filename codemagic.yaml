@@ -1,14 +1,21 @@
 workflows:
   android-workflow:
-    name: Android Release Build
+    name: Android Release Build (Capacitor)
     max_build_duration: 60
+    working_directory: artifacts/mockup-sandbox
     environment:
-      flutter: stable
       java: 17
+      node: 20
     scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
+      - name: Install pnpm
+        script: npm install -g pnpm
+      - name: Install dependencies
+        script: pnpm install
+      - name: Build web assets
+        script: pnpm run build
+      - name: Sync Capacitor
+        script: npx cap sync android
       - name: Build APK (release)
-        script: flutter build apk --release
+        script: cd android && ./gradlew assembleRelease
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - artifacts/mockup-sandbox/android/app/build/outputs/apk/release/*.apk
