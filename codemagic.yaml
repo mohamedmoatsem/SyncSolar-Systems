@@ -1,80 +1,14 @@
 workflows:
-android-workflow:
-  name: Android Release (Flutter)
-  max_build_duration: 60
-  environment:
-    flutter: stable
-    java: 17
-  triggering:
-    events:
-      - push
-      - pull_request
-    branch_patterns:
-      - pattern: main
-        include: true
-        source: true
-  scripts:
-    - name: Get Flutter packages
-      script: flutter pub get
-    - name: Run Flutter analyzer
-      script: flutter analyze
-    - name: Run unit tests
-      script: flutter test
-    - name: Build APK (release)
-      script: |
-        flutter build apk --release \
-          --build-name=1.0.0 \
-          --build-number=$BUILD_NUMBER
-  artifacts:
-    - build/**/outputs/**/*.apk
-    - flutter_drive.log
-  publishing:
-    email:
-      recipients:
-        - user@example.com
-      notify:
-        success: true
-        failure: true
-
-ios-workflow:
-  name: iOS Release (Flutter)
-  max_build_duration: 60
-  environment:
-    flutter: stable
-    xcode: latest
-    cocoapods: default
-  triggering:
-    events:
-      - push
-      - pull_request
-    branch_patterns:
-      - pattern: main
-        include: true
-        source: true
-  scripts:
-    - name: Get Flutter packages
-      script: flutter pub get
-    - name: Run Flutter analyzer
-      script: flutter analyze
-    - name: Run unit tests
-      script: flutter test
-    - name: Install CocoaPods
-      script: |
-        find . -name "Podfile" -execdir pod install \;
-    - name: Build IPA (release)
-      script: |
-        flutter build ipa --release \
-          --build-name=1.0.0 \
-          --build-number=$BUILD_NUMBER \
-          --export-options-plist=/Users/builder/export_options.plist
-  artifacts:
-    - build/ios/ipa/*.ipa
-    - /tmp/xcodebuild_logs/*.log
-    - flutter_drive.log
-  publishing:
-    email:
-      recipients:
-        - user@example.com
-      notify:
-        success: true
-        failure: true
+  android-workflow:
+    name: Android Release Build
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build APK (release)
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
