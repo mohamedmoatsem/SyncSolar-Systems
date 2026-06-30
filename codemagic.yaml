@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 60
     working_directory: flutter-app
     environment:
-      flutter: stable
+      flutter: 3.22.0
       java: 17
     scripts:
       - name: Get Flutter packages
