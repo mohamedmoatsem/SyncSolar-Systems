@@ -1,5 +1,5 @@
 workflows:
-android-workflow:
+  android-workflow:
   name: Android Release (Flutter)
   max_build_duration: 60
   working_directory: artifacts/mockup-sandbox
